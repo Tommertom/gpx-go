@@ -30,7 +30,6 @@ function loadGpxFromStorage() {
     const savedData = localStorage.getItem("savedGpx");
     if (savedData) {
       const gpxData = JSON.parse(savedData);
-      console.log("Found saved GPX:", gpxData.filename);
       return gpxData;
     }
   } catch (error) {
@@ -79,7 +78,6 @@ function processGpxContent(gpxText, filename = null) {
     gpxText.includes('version="1.0"') &&
     gpxText.includes('xmlns="http://www.topografix.com/GPX/1/0"')
   ) {
-    console.log("Converting GPX 1.0 to 1.1 for better compatibility");
     gpxText = gpxText
       .replace('version="1.0"', 'version="1.1"')
       .replace(
@@ -140,14 +138,6 @@ function processGpxContent(gpxText, filename = null) {
     return;
   }
 
-  // Log some sample GPX coordinates
-  if (trackPoints.length > 0) {
-    console.log("Sample GPX coordinates:");
-    trackPoints.slice(0, 3).forEach((point, index) => {
-      console.log(`GPX Point ${index}: [${point.lat}, ${point.lng}]`);
-    });
-  }
-
   // Check for potential issues that could cause the leaflet-gpx library to fail
   const gpxRoot = gpxDoc.querySelector("gpx");
   const hasTrackSegments = gpxDoc.querySelectorAll("trkseg").length > 0;
@@ -175,9 +165,6 @@ function processGpxContent(gpxText, filename = null) {
     gpxText.includes('creator="routemaker.nl"') &&
     gpxText.includes('version="1.0"')
   ) {
-    console.log(
-      "Known problematic GPX pattern detected (routemaker.nl), using fallback immediately"
-    );
     createFallbackGpx();
     return;
   }
@@ -193,9 +180,7 @@ function processGpxContent(gpxText, filename = null) {
     })
       .on("loaded", function (e) {
         map.fitBounds(e.target.getBounds());
-        const statusMessage = filename
-          ? `GPX loaded: ${filename} (${trackPoints.length} track points)`
-          : `GPX loaded with ${trackPoints.length} track points`;
+        const statusMessage = `GPX loaded with ${trackPoints.length} track points`;
         showStatus(statusMessage);
 
         // Update buttons to show clear option since GPX is loaded
@@ -309,11 +294,17 @@ function processGpxContent(gpxText, filename = null) {
           const startPoint = trackPoints[0];
           const endPoint = trackPoints[trackPoints.length - 1];
 
-          L.marker([startPoint.lat, startPoint.lng])
+          const startMarker = L.marker([startPoint.lat, startPoint.lng])
             .bindPopup("Start")
             .addTo(map);
 
-          L.marker([endPoint.lat, endPoint.lng]).bindPopup("End").addTo(map);
+          const endMarker = L.marker([endPoint.lat, endPoint.lng])
+            .bindPopup("End")
+            .addTo(map);
+
+          // Store these markers so they can be cleared later
+          waypointMarkers.push(startMarker);
+          waypointMarkers.push(endMarker);
         }
       }
 
@@ -493,37 +484,14 @@ fetch("./fk.json")
       (item) => item.geom_type === "Point" || item.geom_point !== null
     );
 
-    console.log("Number of points found:", pointsOnly.length);
-
     // Log some sample coordinates to understand the coordinate system
     if (pointsOnly.length > 0) {
-      console.log("Sample coordinates from JSON:");
       pointsOnly.slice(0, 3).forEach((point, index) => {
         if (point.geom_point) {
-          console.log(
-            `Point ${index}: [${point.geom_point[0]}, ${point.geom_point[1]}]`
-          );
-
-          // Test different coordinate system assumptions
-          console.log("Testing different coordinate systems:");
-
           // Test as RD (EPSG:28992)
           const rdResult = convertToWGS84(
             point.geom_point[0],
             point.geom_point[1]
-          );
-          if (rdResult) {
-            console.log(
-              `  Converted to WGS84: [${rdResult.lat}, ${rdResult.lng}]`
-            );
-          }
-
-          // Test as if already in WGS84 but swapped
-          console.log(
-            `  As WGS84 (direct): [${point.geom_point[1]}, ${point.geom_point[0]}]`
-          );
-          console.log(
-            `  As WGS84 (swapped): [${point.geom_point[0]}, ${point.geom_point[1]}]`
           );
         }
       });
@@ -536,7 +504,9 @@ fetch("./fk.json")
     const savedGpx = loadGpxFromStorage();
     if (savedGpx) {
       console.log("Loading saved GPX from localStorage:", savedGpx.filename);
-      showStatus(`Loading saved GPX: ${savedGpx.filename}`, 2000);
+
+      // Update button states immediately so user knows GPX is available
+      updateGpxButtonStates(true);
       processGpxContent(savedGpx.content, savedGpx.filename);
     } else {
       // No saved GPX, ensure buttons show load state
@@ -554,6 +524,8 @@ fetch("./fk.json")
         savedGpx.filename
       );
       showStatus(`Loading saved GPX: ${savedGpx.filename}`, 2000);
+      // Update button states immediately so user knows GPX is available
+      updateGpxButtonStates(true);
       processGpxContent(savedGpx.content, savedGpx.filename);
     } else {
       // No saved GPX, ensure buttons show load state
