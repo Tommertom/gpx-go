@@ -18,45 +18,185 @@
       body {
         margin: 0;
         font-family: sans-serif;
+        -webkit-user-select: none;
+        -moz-user-select: none;
+        -ms-user-select: none;
+        user-select: none;
       }
       #map {
         height: 100vh;
         width: 100%;
+        -webkit-touch-callout: none;
       }
+
+      /* Mobile-first design */
       #upload {
         position: absolute;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
+        top: 10px;
+        left: 10px;
         z-index: 1000;
-        background: rgba(255, 255, 255, 0.9);
-        padding: 10px 20px;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 8px 12px;
         border-radius: 8px;
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
       }
+
       #controls {
-        text-align: center;
-        margin: 10px;
+        position: absolute;
+        top: 10px;
+        right: 10px;
+        z-index: 1000;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 8px 12px;
+        border-radius: 8px;
+        box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
       }
+
+      /* Hide clear GPX buttons by default */
+      #clearGpx,
+      #clearGpxMobile {
+        display: none;
+      }
+
       button {
-        padding: 6px 12px;
+        padding: 12px 16px;
         font-size: 16px;
         cursor: pointer;
+        border: none;
+        border-radius: 6px;
+        background: #007bff;
+        color: white;
+        min-height: 44px; /* Apple's recommended touch target size */
+        min-width: 44px;
+        touch-action: manipulation;
+        -webkit-tap-highlight-color: transparent;
       }
+
+      button:active {
+        background: #0056b3;
+        transform: scale(0.98);
+      }
+
+      /* Bottom control panel for mobile */
+      #bottom-controls {
+        position: fixed;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        background: rgba(255, 255, 255, 0.95);
+        padding: 10px;
+        box-shadow: 0 -2px 10px rgba(0, 0, 0, 0.2);
+        z-index: 1000;
+        display: flex;
+        gap: 10px;
+        justify-content: space-around;
+        backdrop-filter: blur(10px);
+        -webkit-backdrop-filter: blur(10px);
+      }
+
+      #bottom-controls button {
+        flex: 1;
+        max-width: 150px;
+      }
+
       .arrow {
         transform-origin: center center;
         transition: transform 0.2s linear;
       }
+
+      /* Responsive design for different screen sizes */
+      @media (max-width: 768px) {
+        #upload,
+        #controls {
+          display: none; /* Hide top controls on mobile, use bottom panel instead */
+        }
+
+        #map {
+          height: calc(100vh - 70px); /* Account for bottom panel */
+        }
+      }
+
+      @media (min-width: 769px) {
+        #bottom-controls {
+          display: none; /* Hide bottom panel on desktop */
+        }
+
+        #upload {
+          top: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+          padding: 10px 20px;
+        }
+
+        #controls {
+          top: 20px;
+          right: 20px;
+          padding: 10px 20px;
+        }
+
+        button {
+          padding: 6px 12px;
+          min-height: auto;
+          min-width: auto;
+        }
+      }
+
+      /* Prevent zoom on input focus */
+      input,
+      button,
+      select,
+      textarea {
+        font-size: 16px;
+      }
+
+      /* Status indicator */
+      #status {
+        position: absolute;
+        top: 60px;
+        left: 10px;
+        right: 10px;
+        background: rgba(0, 0, 0, 0.7);
+        color: white;
+        padding: 8px 12px;
+        border-radius: 6px;
+        z-index: 1000;
+        font-size: 14px;
+        text-align: center;
+        display: none;
+      }
+
+      @media (max-width: 768px) {
+        #status {
+          top: 10px;
+          left: 50%;
+          right: auto;
+          transform: translateX(-50%);
+          min-width: 200px;
+        }
+      }
     </style>
   </head>
   <body>
+    <div id="status"></div>
+
     <div id="upload">
-      <h2>Upload GPX File</h2>
-      <input type="file" id="gpxFile" accept=".gpx" />
+      <input type="file" id="gpxFile" accept=".gpx" style="display: none" />
+      <button onclick="document.getElementById('gpxFile').click()">GPX</button>
     </div>
 
     <div id="controls">
-      <button id="toggleFollow">Enable Follow Mode</button>
+      <button id="toggleFollow">Follow</button>
+      <button id="clearGpx">Clear GPX</button>
+    </div>
+
+    <!-- Mobile bottom control panel -->
+    <div id="bottom-controls">
+      <button onclick="document.getElementById('gpxFile').click()">
+        Load GPX
+      </button>
+      <button id="toggleFollowMobile">Follow</button>
+      <button id="centerMap">Center</button>
+      <button id="clearGpxMobile">Clear GPX</button>
     </div>
 
     <div id="map"></div>
@@ -67,7 +207,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.5.1/gpx.min.js"></script>
 
     <script>
-      const map = L.map("map").setView([51.505, -0.09], 13);
+      const map = L.map("map").setView([52.3676, 4.9041], 8);
 
       // Tile layer
       L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
@@ -76,6 +216,184 @@
 
       // Load fk.json file automatically when page opens
       let jsonPointsData = null;
+      let waypointMarkers = []; // Array to store waypoint markers
+
+      // Function to save GPX to localStorage
+      function saveGpxToStorage(gpxContent, filename) {
+        try {
+          const gpxData = {
+            content: gpxContent,
+            filename: filename,
+            timestamp: Date.now(),
+          };
+          localStorage.setItem("savedGpx", JSON.stringify(gpxData));
+          console.log("GPX saved to localStorage");
+        } catch (error) {
+          console.error("Error saving GPX to localStorage:", error);
+        }
+      }
+
+      // Function to load GPX from localStorage
+      function loadGpxFromStorage() {
+        try {
+          const savedData = localStorage.getItem("savedGpx");
+          if (savedData) {
+            const gpxData = JSON.parse(savedData);
+            console.log("Found saved GPX:", gpxData.filename);
+            return gpxData;
+          }
+        } catch (error) {
+          console.error("Error loading GPX from localStorage:", error);
+        }
+        return null;
+      }
+
+      // Function to update clear button visibility
+      function updateClearButtonVisibility(show) {
+        const clearDesktop = document.getElementById("clearGpx");
+        const clearMobile = document.getElementById("clearGpxMobile");
+
+        if (show) {
+          clearDesktop.style.display = "inline-block";
+          clearMobile.style.display = "inline-block";
+        } else {
+          clearDesktop.style.display = "none";
+          clearMobile.style.display = "none";
+        }
+      }
+
+      // Function to process GPX content (extracted for reuse)
+      function processGpxContent(gpxText, filename = null) {
+        if (window.gpxLayer) map.removeLayer(window.gpxLayer);
+
+        // Clear any existing waypoint markers
+        waypointMarkers.forEach((marker) => map.removeLayer(marker));
+        waypointMarkers = [];
+
+        // Parse GPX to extract track points
+        const parser = new DOMParser();
+        const gpxDoc = parser.parseFromString(gpxText, "text/xml");
+        const trackPoints = [];
+
+        // Extract all trkpt elements
+        const trkpts = gpxDoc.querySelectorAll("trkpt");
+        trkpts.forEach((trkpt) => {
+          const lat = parseFloat(trkpt.getAttribute("lat"));
+          const lng = parseFloat(trkpt.getAttribute("lon"));
+          trackPoints.push({ lat, lng });
+        });
+
+        console.log(`Extracted ${trackPoints.length} track points from GPX`);
+
+        // Log some sample GPX coordinates
+        if (trackPoints.length > 0) {
+          console.log("Sample GPX coordinates:");
+          trackPoints.slice(0, 3).forEach((point, index) => {
+            console.log(`GPX Point ${index}: [${point.lat}, ${point.lng}]`);
+          });
+        }
+
+        window.gpxLayer = new L.GPX(gpxText, {
+          async: true,
+          marker_options: {
+            startIconUrl:
+              "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-start.png",
+            endIconUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-end.png",
+            shadowUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-shadow.png",
+          },
+        })
+          .on("loaded", function (e) {
+            map.fitBounds(e.target.getBounds());
+            const statusMessage = filename
+              ? `GPX loaded: ${filename} (${trackPoints.length} track points)`
+              : `GPX loaded with ${trackPoints.length} track points`;
+            showStatus(statusMessage);
+
+            // Show clear buttons now that GPX is loaded
+            updateClearButtonVisibility(true);
+
+            // Filter JSON points by proximity to GPX track points
+            if (jsonPointsData && trackPoints.length > 0) {
+              const nearbyPoints = filterPointsByProximity(
+                jsonPointsData,
+                trackPoints,
+                50
+              );
+              console.log(
+                `Found ${nearbyPoints.length} points within 50m of GPX route:`,
+                nearbyPoints
+              );
+
+              // Add markers for nearby points
+              nearbyPoints.forEach((point) => {
+                if (
+                  point.geom_point &&
+                  point.geom_point[0] &&
+                  point.geom_point[1]
+                ) {
+                  // Convert coordinates to WGS84 for display
+                  const converted = convertToWGS84(
+                    point.geom_point[0],
+                    point.geom_point[1]
+                  );
+                  if (converted) {
+                    // Extract number from point name
+                    const pointNumber = point.name
+                      ? point.name.match(/\d+/)?.[0] || "?"
+                      : "?";
+
+                    // Create custom numbered icon
+                    const numberedIcon = L.divIcon({
+                      className: "custom-numbered-icon",
+                      iconSize: [30, 30],
+                      iconAnchor: [15, 30],
+                      popupAnchor: [0, -30],
+                      html: `<div style="
+                        background: #ff4444;
+                        color: white;
+                        width: 30px;
+                        height: 30px;
+                        border-radius: 50% 50% 50% 0;
+                        transform: rotate(-45deg);
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        font-weight: bold;
+                        font-size: 12px;
+                        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                        border: 2px solid white;
+                      ">
+                        <span style="transform: rotate(45deg);">${pointNumber}</span>
+                      </div>`,
+                    });
+
+                    const marker = L.marker([converted.lat, converted.lng], {
+                      icon: numberedIcon,
+                    })
+                      .on("click", function () {
+                        // Open Google Maps when marker is clicked
+                        window.open(
+                          `https://maps.google.com/?q=${converted.lat},${converted.lng}`,
+                          "_blank"
+                        );
+                      })
+                      .addTo(map);
+
+                    // Store marker in array for later removal
+                    waypointMarkers.push(marker);
+                  }
+                }
+              });
+            }
+          })
+          .on("addpoint", function (e) {
+            const wp = e.point;
+            if (wp && wp.getLatLng && wp._name) {
+              wp.bindPopup(`<strong>${wp._name}</strong>`);
+            }
+          })
+          .addTo(map);
+      }
 
       // Define coordinate systems
       // RD New (Dutch coordinate system)
@@ -105,7 +423,6 @@
 
           // Check if coordinates might be in Web Mercator (EPSG:3857)
           if (Math.abs(x) > 180 && Math.abs(y) > 90) {
-            console.log("Trying Web Mercator (EPSG:3857) conversion");
             proj4.defs(
               "EPSG:3857",
               "+proj=merc +a=6378137 +b=6378137 +lat_ts=0.0 +lon_0=0.0 +x_0=0.0 +y_0=0 +k=1.0 +units=m +nadgrids=@null +wktext +no_defs"
@@ -115,7 +432,6 @@
           }
 
           // If nothing else works, try RD anyway
-          console.log("Defaulting to RD conversion");
           const result = proj4("EPSG:28992", "EPSG:4326", [x, y]);
           return { lng: result[0], lat: result[1] };
         } catch (error) {
@@ -127,8 +443,6 @@
       fetch("./fk.json")
         .then((response) => response.json())
         .then((data) => {
-          console.log("Full fk.json content:", data);
-
           // Filter for points only (items where geom_type is "Point" or geom_point is not null)
           const pointsOnly = data.result.filter(
             (item) => item.geom_type === "Point" || item.geom_point !== null
@@ -173,9 +487,31 @@
 
           // Store for later filtering against GPX
           jsonPointsData = pointsOnly;
+
+          // After loading fk.json, check for saved GPX in localStorage
+          const savedGpx = loadGpxFromStorage();
+          if (savedGpx) {
+            console.log(
+              "Loading saved GPX from localStorage:",
+              savedGpx.filename
+            );
+            showStatus(`Loading saved GPX: ${savedGpx.filename}`, 2000);
+            processGpxContent(savedGpx.content, savedGpx.filename);
+          }
         })
         .catch((error) => {
           console.error("Error loading fk.json:", error);
+
+          // Even if fk.json fails, still try to load saved GPX
+          const savedGpx = loadGpxFromStorage();
+          if (savedGpx) {
+            console.log(
+              "Loading saved GPX from localStorage (fk.json failed):",
+              savedGpx.filename
+            );
+            showStatus(`Loading saved GPX: ${savedGpx.filename}`, 2000);
+            processGpxContent(savedGpx.content, savedGpx.filename);
+          }
         });
 
       // Function to calculate distance between two lat/lng points in meters
@@ -229,13 +565,7 @@
               gpxPoint.lat,
               gpxPoint.lng
             );
-            if (distance <= maxDistance) {
-              console.log(
-                `Point ${jsonPoint.id} is ${distance.toFixed(
-                  2
-                )}m from GPX track point`
-              );
-            }
+
             return distance <= maxDistance;
           });
         });
@@ -248,114 +578,17 @@
           const file = e.target.files[0];
           if (!file) return;
 
+          showStatus("Loading GPX file...", 1000);
+
           const reader = new FileReader();
           reader.onload = function (event) {
             const gpxText = event.target.result;
 
-            if (window.gpxLayer) map.removeLayer(window.gpxLayer);
+            // Save to localStorage
+            saveGpxToStorage(gpxText, file.name);
 
-            // Parse GPX to extract track points
-            const parser = new DOMParser();
-            const gpxDoc = parser.parseFromString(gpxText, "text/xml");
-            const trackPoints = [];
-
-            // Extract all trkpt elements
-            const trkpts = gpxDoc.querySelectorAll("trkpt");
-            trkpts.forEach((trkpt) => {
-              const lat = parseFloat(trkpt.getAttribute("lat"));
-              const lng = parseFloat(trkpt.getAttribute("lon"));
-              trackPoints.push({ lat, lng });
-            });
-
-            console.log(
-              `Extracted ${trackPoints.length} track points from GPX`
-            );
-
-            // Log some sample GPX coordinates
-            if (trackPoints.length > 0) {
-              console.log("Sample GPX coordinates:");
-              trackPoints.slice(0, 3).forEach((point, index) => {
-                console.log(`GPX Point ${index}: [${point.lat}, ${point.lng}]`);
-              });
-            }
-
-            window.gpxLayer = new L.GPX(gpxText, {
-              async: true,
-              marker_options: {
-                startIconUrl:
-                  "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-start.png",
-                endIconUrl:
-                  "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-end.png",
-                shadowUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-shadow.png",
-              },
-            })
-              .on("loaded", function (e) {
-                map.fitBounds(e.target.getBounds());
-
-                // Filter JSON points by proximity to GPX track points
-                if (jsonPointsData && trackPoints.length > 0) {
-                  const nearbyPoints = filterPointsByProximity(
-                    jsonPointsData,
-                    trackPoints,
-                    50
-                  );
-                  console.log(
-                    `Found ${nearbyPoints.length} points within 50m of GPX route:`,
-                    nearbyPoints
-                  );
-
-                  // Add markers for nearby points
-                  nearbyPoints.forEach((point) => {
-                    if (
-                      point.geom_point &&
-                      point.geom_point[0] &&
-                      point.geom_point[1]
-                    ) {
-                      // Convert coordinates to WGS84 for display
-                      const converted = convertToWGS84(
-                        point.geom_point[0],
-                        point.geom_point[1]
-                      );
-                      if (converted) {
-                        const marker = L.marker(
-                          [converted.lat, converted.lng],
-                          {
-                            icon: L.icon({
-                              iconUrl:
-                                "https://raw.githubusercontent.com/pointhi/leaflet-color-markers/master/img/marker-icon-red.png",
-                              shadowUrl:
-                                "https://cdnjs.cloudflare.com/ajax/libs/leaflet/0.7.7/images/marker-shadow.png",
-                              iconSize: [25, 41],
-                              iconAnchor: [12, 41],
-                              popupAnchor: [1, -34],
-                              shadowSize: [41, 41],
-                            }),
-                          }
-                        )
-                          .bindPopup(
-                            `<strong>${point.name}</strong><br>ID: ${
-                              point.id
-                            }<br>RD: [${point.geom_point[0].toFixed(
-                              2
-                            )}, ${point.geom_point[1].toFixed(
-                              2
-                            )}]<br>WGS84: [${converted.lat.toFixed(
-                              6
-                            )}, ${converted.lng.toFixed(6)}]`
-                          )
-                          .addTo(map);
-                      }
-                    }
-                  });
-                }
-              })
-              .on("addpoint", function (e) {
-                const wp = e.point;
-                if (wp && wp.getLatLng && wp._name) {
-                  wp.bindPopup(`<strong>${wp._name}</strong>`);
-                }
-              })
-              .addTo(map);
+            // Process the GPX content
+            processGpxContent(gpxText, file.name);
           };
           reader.readAsText(file);
         });
@@ -364,6 +597,7 @@
       let userMarker = null;
       let heading = 0;
       let followMode = false;
+      let initialLocationSet = false;
 
       // Arrow icon
       const arrowIcon = L.divIcon({
@@ -375,13 +609,78 @@
              </svg>`,
       });
 
-      // Follow mode toggle
-      document.getElementById("toggleFollow").addEventListener("click", () => {
+      // Follow mode toggle (for both desktop and mobile)
+      function toggleFollowMode() {
         followMode = !followMode;
-        document.getElementById("toggleFollow").textContent = followMode
-          ? "Disable Follow Mode"
-          : "Enable Follow Mode";
+        const followText = followMode ? "Unfollow" : "Follow";
+        document.getElementById("toggleFollow").textContent = followText;
+        document.getElementById("toggleFollowMobile").textContent = followText;
+
+        // Show status
+        showStatus(followMode ? "Follow mode enabled" : "Follow mode disabled");
+
+        if (followMode && userMarker) {
+          map.setView(userMarker.getLatLng());
+        }
+      }
+
+      document
+        .getElementById("toggleFollow")
+        .addEventListener("click", toggleFollowMode);
+      document
+        .getElementById("toggleFollowMobile")
+        .addEventListener("click", toggleFollowMode);
+
+      // Center map button
+      document.getElementById("centerMap").addEventListener("click", () => {
+        if (userMarker) {
+          map.setView(userMarker.getLatLng(), map.getZoom());
+          showStatus("Centered on your location");
+        } else if (window.gpxLayer) {
+          map.fitBounds(window.gpxLayer.getBounds());
+          showStatus("Centered on GPX route");
+        } else {
+          showStatus("No location or route to center on");
+        }
       });
+
+      // Clear GPX buttons
+      function clearSavedGpx() {
+        try {
+          localStorage.removeItem("savedGpx");
+          if (window.gpxLayer) {
+            map.removeLayer(window.gpxLayer);
+            window.gpxLayer = null;
+          }
+          // Clear all waypoint markers
+          waypointMarkers.forEach((marker) => map.removeLayer(marker));
+          waypointMarkers = [];
+
+          // Hide clear buttons since no GPX is loaded
+          updateClearButtonVisibility(false);
+          showStatus("GPX and waypoints cleared");
+        } catch (error) {
+          console.error("Error clearing GPX from localStorage:", error);
+          showStatus("Error clearing GPX");
+        }
+      }
+
+      document
+        .getElementById("clearGpx")
+        .addEventListener("click", clearSavedGpx);
+      document
+        .getElementById("clearGpxMobile")
+        .addEventListener("click", clearSavedGpx);
+
+      // Status display function
+      function showStatus(message, duration = 2000) {
+        const status = document.getElementById("status");
+        status.textContent = message;
+        status.style.display = "block";
+        setTimeout(() => {
+          status.style.display = "none";
+        }, duration);
+      }
 
       // Watch position
       if (navigator.geolocation) {
@@ -393,14 +692,23 @@
               userMarker = L.marker(latlng, {
                 icon: arrowIcon,
               }).addTo(map);
-              if (followMode) map.setView(latlng, 16);
+
+              // Center map on user's location when first detected
+              if (!initialLocationSet) {
+                map.setView(latlng, 16); // Higher zoom for mobile
+                initialLocationSet = true;
+                showStatus("Location found");
+              } else if (followMode) {
+                map.setView(latlng, map.getZoom()); // Maintain current zoom level
+              }
             } else {
               userMarker.setLatLng(latlng);
-              if (followMode) map.setView(latlng);
+              if (followMode) map.setView(latlng, map.getZoom()); // Maintain current zoom
             }
           },
           (err) => {
-            alert("Geolocation error: " + err.message);
+            console.error("Geolocation error:", err);
+            showStatus("Location access denied or unavailable", 3000);
           },
           {
             enableHighAccuracy: true,
@@ -408,7 +716,7 @@
           }
         );
       } else {
-        alert("Geolocation not supported.");
+        showStatus("Geolocation not supported by this device", 3000);
       }
 
       // Handle compass heading
