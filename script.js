@@ -74,20 +74,71 @@ function processGpxContent(gpxText, filename = null) {
   waypointMarkers.forEach((marker) => map.removeLayer(marker));
   waypointMarkers = [];
 
-  // Parse GPX to extract track points
+  // Check and potentially fix GPX version compatibility
+  if (
+    gpxText.includes('version="1.0"') &&
+    gpxText.includes('xmlns="http://www.topografix.com/GPX/1/0"')
+  ) {
+    console.log("Converting GPX 1.0 to 1.1 for better compatibility");
+    gpxText = gpxText
+      .replace('version="1.0"', 'version="1.1"')
+      .replace(
+        'xmlns="http://www.topografix.com/GPX/1/0"',
+        'xmlns="http://www.topografix.com/GPX/1/1"'
+      )
+      .replace(
+        'xsi:schemaLocation="http://www.topografix.com/GPX/1/0 http://www.topografix.com/GPX/1/0/gpx.xsd"',
+        'xsi:schemaLocation="http://www.topografix.com/GPX/1/1 http://www.topografix.com/GPX/1/1/gpx.xsd"'
+      );
+  }
+
+  // Parse GPX to extract track points and waypoints
   const parser = new DOMParser();
   const gpxDoc = parser.parseFromString(gpxText, "text/xml");
+
+  // Check for XML parsing errors
+  const parserError = gpxDoc.querySelector("parsererror");
+  if (parserError) {
+    console.error("XML parsing error:", parserError.textContent);
+    showStatus("Error: Invalid GPX file format", 3000);
+    return;
+  }
+
   const trackPoints = [];
+  const waypoints = [];
 
   // Extract all trkpt elements
   const trkpts = gpxDoc.querySelectorAll("trkpt");
   trkpts.forEach((trkpt) => {
     const lat = parseFloat(trkpt.getAttribute("lat"));
     const lng = parseFloat(trkpt.getAttribute("lon"));
-    trackPoints.push({ lat, lng });
+    if (!isNaN(lat) && !isNaN(lng)) {
+      trackPoints.push({ lat, lng });
+    }
   });
 
-  console.log(`Extracted ${trackPoints.length} track points from GPX`);
+  // Extract waypoints
+  const wpts = gpxDoc.querySelectorAll("wpt");
+  wpts.forEach((wpt) => {
+    const lat = parseFloat(wpt.getAttribute("lat"));
+    const lng = parseFloat(wpt.getAttribute("lon"));
+    const nameEl = wpt.querySelector("name");
+    const name = nameEl ? nameEl.textContent : "Waypoint";
+
+    if (!isNaN(lat) && !isNaN(lng)) {
+      waypoints.push({ lat, lng, name });
+    }
+  });
+
+  console.log(
+    `Extracted ${trackPoints.length} track points and ${waypoints.length} waypoints from GPX`
+  );
+
+  // Check if we have any usable data
+  if (trackPoints.length === 0 && waypoints.length === 0) {
+    showStatus("Error: No track points or waypoints found in GPX file", 5000);
+    return;
+  }
 
   // Log some sample GPX coordinates
   if (trackPoints.length > 0) {
@@ -97,25 +148,226 @@ function processGpxContent(gpxText, filename = null) {
     });
   }
 
-  window.gpxLayer = new L.GPX(gpxText, {
-    async: true,
-    marker_options: {
-      startIconUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-start.png",
-      endIconUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-end.png",
-      shadowUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-shadow.png",
-    },
-  })
-    .on("loaded", function (e) {
-      map.fitBounds(e.target.getBounds());
+  // Check for potential issues that could cause the leaflet-gpx library to fail
+  const gpxRoot = gpxDoc.querySelector("gpx");
+  const hasTrackSegments = gpxDoc.querySelectorAll("trkseg").length > 0;
+  const hasRoutes = gpxDoc.querySelectorAll("rte").length > 0;
+
+  // Additional checks for common problematic patterns
+  const hasValidTrackPoints = trackPoints.length > 0;
+  const hasValidWaypoints = waypoints.length > 0;
+
+  // If the GPX file has issues or we have a problematic structure, use fallback immediately
+  if (
+    !gpxRoot ||
+    (!hasTrackSegments && !hasRoutes && !hasValidWaypoints) ||
+    (hasTrackSegments && !hasValidTrackPoints)
+  ) {
+    console.log(
+      "GPX structure issues detected, using fallback method immediately"
+    );
+    createFallbackGpx();
+    return;
+  }
+
+  // For this specific GPX file pattern (routemaker.nl with specific structure), use fallback
+  if (
+    gpxText.includes('creator="routemaker.nl"') &&
+    gpxText.includes('version="1.0"')
+  ) {
+    console.log(
+      "Known problematic GPX pattern detected (routemaker.nl), using fallback immediately"
+    );
+    createFallbackGpx();
+    return;
+  }
+
+  try {
+    window.gpxLayer = new L.GPX(gpxText, {
+      async: true,
+      marker_options: {
+        startIconUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-start.png",
+        endIconUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-end.png",
+        shadowUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-shadow.png",
+      },
+    })
+      .on("loaded", function (e) {
+        map.fitBounds(e.target.getBounds());
+        const statusMessage = filename
+          ? `GPX loaded: ${filename} (${trackPoints.length} track points)`
+          : `GPX loaded with ${trackPoints.length} track points`;
+        showStatus(statusMessage);
+
+        // Update buttons to show clear option since GPX is loaded
+        updateGpxButtonStates(true);
+
+        // Filter JSON points by proximity to GPX track points
+        if (jsonPointsData && trackPoints.length > 0) {
+          const nearbyPoints = filterPointsByProximity(
+            jsonPointsData,
+            trackPoints,
+            50
+          );
+          console.log(
+            `Found ${nearbyPoints.length} points within 50m of GPX route:`,
+            nearbyPoints
+          );
+
+          // Add markers for nearby points
+          nearbyPoints.forEach((point) => {
+            if (point.converted) {
+              // Extract number from point name
+              const pointNumber = point.name
+                ? point.name.match(/\d+/)?.[0] || "?"
+                : "?";
+
+              // Create custom numbered icon
+              const numberedIcon = L.divIcon({
+                className: "custom-numbered-icon",
+                iconSize: [30, 30],
+                iconAnchor: [15, 30],
+                popupAnchor: [0, -30],
+                html: `<div style="
+                background: #ff4444;
+                color: white;
+                width: 30px;
+                height: 30px;
+                border-radius: 50% 50% 50% 0;
+                transform: rotate(-45deg);
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                font-weight: bold;
+                font-size: 12px;
+                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                border: 2px solid white;
+              ">
+                <span style="transform: rotate(45deg);">${pointNumber}</span>
+              </div>`,
+              });
+
+              const marker = L.marker(
+                [point.converted.lat, point.converted.lng],
+                {
+                  icon: numberedIcon,
+                }
+              )
+                .on("click", function () {
+                  // Open Google Maps when marker is clicked
+                  window.open(
+                    `https://maps.google.com/?q=${point.converted.lat},${point.converted.lng}`,
+                    "_blank"
+                  );
+                })
+                .addTo(map);
+
+              // Store marker in array for later removal
+              waypointMarkers.push(marker);
+            }
+          });
+        }
+      })
+      .on("addpoint", function (e) {
+        const wp = e.point;
+        if (wp && wp.getLatLng && wp._name) {
+          wp.bindPopup(`<strong>${wp._name}</strong>`);
+        }
+      })
+      .on("error", function (e) {
+        console.error("GPX loading error:", e);
+        showStatus("GPX library failed, using fallback method...", 2000);
+        createFallbackGpx();
+      })
+      .addTo(map);
+  } catch (error) {
+    console.error("Error creating GPX layer:", error);
+    showStatus("Primary GPX parsing failed, using fallback method...", 2000);
+    createFallbackGpx();
+  }
+
+  // Function to create fallback GPX visualization
+  function createFallbackGpx() {
+    try {
+      let bounds = null;
+
+      // Create polyline if we have track points
+      if (trackPoints.length > 0) {
+        const polyline = L.polyline(
+          trackPoints.map((p) => [p.lat, p.lng]),
+          {
+            color: "blue",
+            weight: 4,
+            opacity: 0.8,
+          }
+        ).addTo(map);
+
+        bounds = polyline.getBounds();
+        window.gpxLayer = polyline;
+
+        // Add start and end markers for tracks
+        if (trackPoints.length > 1) {
+          const startPoint = trackPoints[0];
+          const endPoint = trackPoints[trackPoints.length - 1];
+
+          L.marker([startPoint.lat, startPoint.lng])
+            .bindPopup("Start")
+            .addTo(map);
+
+          L.marker([endPoint.lat, endPoint.lng]).bindPopup("End").addTo(map);
+        }
+      }
+
+      // Add waypoint markers - DISABLED
+      // We don't want to show the GPX waypoints on the map
+      /*
+      if (waypoints.length > 0) {
+        waypoints.forEach((waypoint, index) => {
+          const marker = L.marker([waypoint.lat, waypoint.lng])
+            .bindPopup(`<strong>${waypoint.name}</strong>`)
+            .addTo(map);
+
+          waypointMarkers.push(marker);
+
+          // If no track points, use waypoints to set bounds
+          if (!bounds) {
+            if (index === 0) {
+              bounds = L.latLngBounds(
+                [waypoint.lat, waypoint.lng],
+                [waypoint.lat, waypoint.lng]
+              );
+            } else {
+              bounds.extend([waypoint.lat, waypoint.lng]);
+            }
+          }
+        });
+      }
+      */
+
+      // If no track points but we have waypoints, use waypoints for bounds calculation only
+      if (!bounds && waypoints.length > 0) {
+        bounds = L.latLngBounds(
+          [waypoints[0].lat, waypoints[0].lng],
+          [waypoints[0].lat, waypoints[0].lng]
+        );
+        waypoints.forEach((waypoint) => {
+          bounds.extend([waypoint.lat, waypoint.lng]);
+        });
+      }
+
+      // Fit map to bounds
+      if (bounds) {
+        map.fitBounds(bounds);
+      }
+
       const statusMessage = filename
-        ? `GPX loaded: ${filename} (${trackPoints.length} track points)`
-        : `GPX loaded with ${trackPoints.length} track points`;
+        ? `GPX loaded (fallback): ${filename} (${trackPoints.length} track points, ${waypoints.length} waypoints)`
+        : `GPX loaded (fallback) with ${trackPoints.length} track points, ${waypoints.length} waypoints`;
       showStatus(statusMessage);
 
       // Update buttons to show clear option since GPX is loaded
       updateGpxButtonStates(true);
 
-      // Filter JSON points by proximity to GPX track points
+      // Handle proximity filtering for JSON points if available
       if (jsonPointsData && trackPoints.length > 0) {
         const nearbyPoints = filterPointsByProximity(
           jsonPointsData,
@@ -180,14 +432,12 @@ function processGpxContent(gpxText, filename = null) {
           }
         });
       }
-    })
-    .on("addpoint", function (e) {
-      const wp = e.point;
-      if (wp && wp.getLatLng && wp._name) {
-        wp.bindPopup(`<strong>${wp._name}</strong>`);
-      }
-    })
-    .addTo(map);
+    } catch (fallbackError) {
+      console.error("Fallback parsing also failed:", fallbackError);
+      showStatus("Error: Could not load GPX file with any method", 5000);
+      updateGpxButtonStates(false);
+    }
+  }
 }
 
 // Define coordinate systems
