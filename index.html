@@ -3,7 +3,46 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>GPX Viewer with Follow Mode</title>
+    <title>GPX Go!</title>
+
+    <!-- PWA Meta Tags -->
+    <meta name="application-name" content="GPX Go!" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta
+      name="apple-mobile-web-app-status-bar-style"
+      content="black-translucent"
+    />
+    <meta name="apple-mobile-web-app-title" content="GPX Go!" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="theme-color" content="#4CAF50" />
+
+    <!-- Web App Manifest -->
+    <link rel="manifest" href="./manifest.json" />
+
+    <!-- Apple Touch Icons -->
+    <link
+      rel="apple-touch-icon"
+      href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM0Q0FGNTAIC0gPY2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE4MCIgZmlsbD0iIzJFN0QzMiIvPjxwYXRoIGQ9Ik0yNTYgMTUwIEMyMTAgMTUwIDE4MCAyMDAgMTgwIDI0MCBDMTU4IDI5MCAyNTYgMzgwIDI1NiAzODBTMzU0IDI5MCAzMzIgMjQwIEMzMzIgMjAwIDMwMiAxNTAgMjU2IDE1MCBaIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMjU2IiBjeT0iMjQwIiByPSIzMCIgZmlsbD0iIzRDQUY1MPC0+PC9zdmc+"
+    />
+    <link
+      rel="apple-touch-icon"
+      sizes="180x180"
+      href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM0Q0FGNTAIC0gPY2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE4MCIgZmlsbD0iIzJFN0QzMiIvPjxwYXRoIGQ9Ik0yNTYgMTUwIEMyMTAgMTUwIDE4MCAyMDAgMTgwIDI0MEADK15OCDI5MCAyNTYgMzgwIDI1NiAzODBTMzU0IDI5MCAzMzIgMjQwIEMzMzIgMjAwIDMwMiAxNTAgMjU2IDE1MCBaIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMjU2IiBjeT0iMjQwIiByPSIzMCIgZmlsbD0iIzRDQUY1MPC0+PC9zdmc+"
+    />
+
+    <!-- Standard Icons -->
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      sizes="192x192"
+      href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM0Q0FGNTAIC0gPY2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE4MCIgZmlsbD0iIzJFN0QzMiIvPjxwYXRoIGQ9Ik0yNTYgMTUwIEMyMTAgMTUwIDE4MCAyMDAgMTgwIDI0MEADK15OCDI5MCAyNTYgMzgwIDI1NiAzODBTMzU0IDI5MCAzMzIgMjQwIEMzMzIgMjAwIDMwMiAxNTAgMjU2IDE1MCBaIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMjU2IiBjeT0iMjQwIiByPSIzMCIgZmlsbD0iIzRDQUY1MPC0+PC9zdmc+"
+    />
+    <link
+      rel="icon"
+      type="image/svg+xml"
+      sizes="512x512"
+      href="data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM0Q0FGNTAIC0gPY2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE4MCIgZmlsbD0iIzJFN0QzMiIvPjxwYXRoIGQ9Ik0yNTYgMTUwIEMyMTAgMTUwIDE4MCAyMDAgMTgwIDI0MEADK15OCDI5MCAyNTYgMzgwIDI1NiAzODBTMzU0IDI5MCAzMzIgMjQwIEMzMzIgMjAwIDMwMiAxNTAgMjU2IDE1MCBaIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMjU2IiBjeT0iMjQwIiByPSIzMCIgZmlsbD0iIzRDQUY1MPC0+PC9zdmc+"
+    />
 
     <!-- Leaflet CSS -->
     <link
@@ -58,7 +97,7 @@
         cursor: pointer;
         border: none;
         border-radius: 6px;
-        background: #007bff;
+        background: #4caf50;
         color: white;
         min-height: 44px; /* Apple's recommended touch target size */
         min-width: 44px;
@@ -67,7 +106,7 @@
       }
 
       button:active {
-        background: #0056b3;
+        background: #45a049;
         transform: scale(0.98);
       }
 

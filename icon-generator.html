@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Generate Icons for GPX Go!</title>
+  </head>
+  <body>
+    <h1>Icon Generator for GPX Go!</h1>
+    <p>
+      Copy the SVG below and use an online SVG to PNG converter to create the
+      required icon files:
+    </p>
+
+    <h2>Icon SVG (Green GPS/Route theme):</h2>
+    <div style="border: 1px solid #ccc; padding: 20px; margin: 20px 0">
+      <svg
+        width="512"
+        height="512"
+        viewBox="0 0 512 512"
+        style="background: #4caf50; border-radius: 20%"
+      >
+        <!-- Background circle -->
+        <circle
+          cx="256"
+          cy="256"
+          r="220"
+          fill="#2E7D32"
+          stroke="#ffffff"
+          stroke-width="8"
+        />
+
+        <!-- GPS/Location pin -->
+        <path
+          d="M256 120 C200 120 160 160 160 216 C160 272 256 360 256 360 S352 272 352 216 C352 160 312 120 256 120 Z"
+          fill="#ffffff"
+        />
+        <circle cx="256" cy="216" r="40" fill="#4CAF50" />
+
+        <!-- Route line -->
+        <path
+          d="M100 400 Q180 350 256 360 Q332 370 412 400"
+          stroke="#ffffff"
+          stroke-width="12"
+          fill="none"
+          stroke-linecap="round"
+        />
+        <path
+          d="M80 420 Q160 380 256 390 Q352 400 432 420"
+          stroke="#ffffff"
+          stroke-width="8"
+          fill="none"
+          stroke-linecap="round"
+        />
+      </svg>
+    </div>
+
+    <h2>Instructions:</h2>
+    <ol>
+      <li>Copy the SVG code above</li>
+      <li>
+        Go to an online SVG to PNG converter (like svgtopng.com or convertio.co)
+      </li>
+      <li>
+        Generate the following files:
+        <ul>
+          <li><strong>icon-192.png</strong> - 192x192 pixels</li>
+          <li><strong>icon-512.png</strong> - 512x512 pixels</li>
+          <li><strong>apple-touch-icon.png</strong> - 180x180 pixels</li>
+        </ul>
+      </li>
+      <li>Save these files in your GPX project folder</li>
+    </ol>
+
+    <h2>Alternative: Use this Data URL for testing</h2>
+    <p>
+      You can use this data URL temporarily in your manifest.json for testing:
+    </p>
+    <textarea style="width: 100%; height: 100px">
+data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHN0eWxlPSJiYWNrZ3JvdW5kOiAjNENBRjUwOyBib3JkZXItcmFkaXVzOiAyMCU7Ij4KICAgIDxjaXJjbGUgY3g9IjI1NiIgY3k9IjI1NiIgcj0iMjIwIiBmaWxsPSIjMkU3RDMyIiBzdHJva2U9IiNmZmZmZmYiIHN0cm9rZS13aWR0aD0iOCIvPgogICAgPHBhdGggZD0iTTI1NiAxMjAgQzIwMCAxMjAgMTYwIDE2MCAxNjAgMjE2IEMxNjAgMjcyIDI1NiAzNjAgMjU2IDM2MCBTM1ggMjcyIDM1MiAyMTYgQzM1MiAxNjAgMzEyIDEyMCAyNTYgMTIwIFoiIGZpbGw9IiNmZmZmZmYiLz4KICAgIDxjaXJjbGUgY3g9IjI1NiIgY3k9IjIxNiIgcj0iNDAiIGZpbGw9IiM0Q0FGNTAIC0gICAgPHBhdGggZD0iTTEwMCA0MDAgUTE4MCAzNTAgMjU2IDM2MCBRM1ggMzcwIDQxMiA0MDAiIHN0cm9rZT0iI2ZmZmZmZiIgc3Ryb2tlLXdpZHRoPSIxMiIgZmlsbD0ibm9uZSIgc3Ryb2tlLWxpbmVjYXA9InJvdW5kIi8+CiAgICA8cGF0aCBkPSJNODAgNDIwIFExNjAgMzgwIDI1NiAzOTAgUTM1MiA0MDAgNDMyIDQyMCIgc3Ryb2tlPSIjZmZmZmZmIiBzdHJva2Utd2lkdGg9IjgiIGZpbGw9Im5vbmUiIHN0cm9rZS1saW5lY2FwPSJyb3VuZCIvPgo8L3N2Zz4=</textarea
+    >
+  </body>
+</html>

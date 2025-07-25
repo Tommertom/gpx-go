@@ -1,0 +1,28 @@
+{
+  "name": "GPX Go!",
+  "short_name": "GPX Go!",
+  "description": "A mobile-friendly GPX viewer with follow mode",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#2E7D32",
+  "theme_color": "#4CAF50",
+  "orientation": "portrait-primary",
+  "scope": "./",
+  "icons": [
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTkyIiBoZWlnaHQ9IjE5MiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM0Q0FGNTAIC0gPY2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE4MCIgZmlsbD0iIzJFN0QzMiIvPjxwYXRoIGQ9Ik0yNTYgMTUwIEMyMTAgMTUwIDE4MCAyMDAgMTgwIDI0MCBDMTU4IDI5MCAyNTYgMzgwIDI1NiAzODBTMzU0IDI5MCAzMzIgMjQwIEMzMzIgMjAwIDMwMiAxNTAgMjU2IDE1MCBaIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMjU2IiBjeT0iMjQwIiByPSIzMCIgZmlsbD0iIzRDQUY1MFC0+PC9zdmc+",
+      "sizes": "192x192",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNTEyIiBoZWlnaHQ9IjUxMiIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM0Q0FGNTAIC0gPY2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE4MCIgZmlsbD0iIzJFN0QzMiIvPjxwYXRoIGQ9Ik0yNTYgMTUwIEMyMTAgMTUwIDE4MCAyMDAgMTgwIDI0MCBDMTU4IDI5MCAyNTYgMzgwIDI1NiAzODBTMzU0IDI5MCAzMzIgMjQwIEMzMzIgMjAwIDMwMiAxNTAgMjU2IDE1MCBaIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMjU2IiBjeT0iMjQwIiByPSIzMCIgZmlsbD0iIzRDQUY1MFC0+PC9zdmc+",
+      "sizes": "512x512",
+      "type": "image/svg+xml"
+    },
+    {
+      "src": "data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iMTgwIiBoZWlnaHQ9IjE4MCIgdmlld0JveD0iMCAwIDUxMiA1MTIiIHhtbG5zPSJodHRwOi8vd3d3LnczLm9yZy8yMDAwL3N2ZyI+PHJlY3Qgd2lkdGg9IjUxMiIgaGVpZ2h0PSI1MTIiIGZpbGw9IiM0Q0FGNTAIC0gPY2lyY2xlIGN4PSIyNTYiIGN5PSIyNTYiIHI9IjE4MCIgZmlsbD0iIzJFN0QzMiIvPjxwYXRoIGQ9Ik0yNTYgMTUwIEMyMTAgMTUwIDE4MCAyMDAgMTgwIDI0MCBDMTU4IDI5MCAyNTYgMzgwIDI1NiAzODBTMzU0IDI5MCAzMzIgMjQwIEMzMzIgMjAwIDMwMiAxNTAgMjU2IDE1MCBaIiBmaWxsPSIjZmZmZmZmIi8+PGNpcmNsZSBjeD0iMjU2IiBjeT0iMjQwIiByPSIzMCIgZmlsbD0iIzRDQUY1MPC0+PC9zdmc+",
+      "sizes": "180x180",
+      "type": "image/svg+xml"
+    }
+  ]
+}
