@@ -448,7 +448,6 @@
             (item) => item.geom_type === "Point" || item.geom_point !== null
           );
 
-          console.log("Points only:", pointsOnly);
           console.log("Number of points found:", pointsOnly.length);
 
           // Log some sample coordinates to understand the coordinate system
@@ -697,7 +696,6 @@
               if (!initialLocationSet) {
                 map.setView(latlng, 16); // Higher zoom for mobile
                 initialLocationSet = true;
-                showStatus("Location found");
               } else if (followMode) {
                 map.setView(latlng, map.getZoom()); // Maintain current zoom level
               }
