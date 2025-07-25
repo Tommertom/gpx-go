@@ -52,12 +52,6 @@
         box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
       }
 
-      /* Hide clear GPX buttons by default */
-      #clearGpx,
-      #clearGpxMobile {
-        display: none;
-      }
-
       button {
         padding: 12px 16px;
         font-size: 16px;
@@ -181,22 +175,20 @@
 
     <div id="upload">
       <input type="file" id="gpxFile" accept=".gpx" style="display: none" />
-      <button onclick="document.getElementById('gpxFile').click()">GPX</button>
+      <button id="gpxButton" onclick="handleGpxButtonClick()">Load GPX</button>
     </div>
 
     <div id="controls">
       <button id="toggleFollow">Follow</button>
-      <button id="clearGpx">Clear GPX</button>
     </div>
 
     <!-- Mobile bottom control panel -->
     <div id="bottom-controls">
-      <button onclick="document.getElementById('gpxFile').click()">
+      <button id="gpxButtonMobile" onclick="handleGpxButtonClick()">
         Load GPX
       </button>
       <button id="toggleFollowMobile">Follow</button>
       <button id="centerMap">Center</button>
-      <button id="clearGpxMobile">Clear GPX</button>
     </div>
 
     <div id="map"></div>
@@ -248,17 +240,30 @@
         return null;
       }
 
-      // Function to update clear button visibility
-      function updateClearButtonVisibility(show) {
-        const clearDesktop = document.getElementById("clearGpx");
-        const clearMobile = document.getElementById("clearGpxMobile");
+      // Function to update GPX button states
+      function updateGpxButtonStates(gpxLoaded) {
+        const desktopButton = document.getElementById("gpxButton");
+        const mobileButton = document.getElementById("gpxButtonMobile");
 
-        if (show) {
-          clearDesktop.style.display = "inline-block";
-          clearMobile.style.display = "inline-block";
+        if (gpxLoaded) {
+          desktopButton.textContent = "Clear GPX";
+          mobileButton.textContent = "Clear GPX";
         } else {
-          clearDesktop.style.display = "none";
-          clearMobile.style.display = "none";
+          desktopButton.textContent = "Load GPX";
+          mobileButton.textContent = "Load GPX";
+        }
+      }
+
+      // Function to handle GPX button click (load or clear)
+      function handleGpxButtonClick() {
+        const desktopButton = document.getElementById("gpxButton");
+
+        if (desktopButton.textContent === "Load GPX") {
+          // Load GPX
+          document.getElementById("gpxFile").click();
+        } else {
+          // Clear GPX
+          clearSavedGpx();
         }
       }
 
@@ -309,8 +314,8 @@
               : `GPX loaded with ${trackPoints.length} track points`;
             showStatus(statusMessage);
 
-            // Show clear buttons now that GPX is loaded
-            updateClearButtonVisibility(true);
+            // Update buttons to show clear option since GPX is loaded
+            updateGpxButtonStates(true);
 
             // Filter JSON points by proximity to GPX track points
             if (jsonPointsData && trackPoints.length > 0) {
@@ -326,62 +331,54 @@
 
               // Add markers for nearby points
               nearbyPoints.forEach((point) => {
-                if (
-                  point.geom_point &&
-                  point.geom_point[0] &&
-                  point.geom_point[1]
-                ) {
-                  // Convert coordinates to WGS84 for display
-                  const converted = convertToWGS84(
-                    point.geom_point[0],
-                    point.geom_point[1]
-                  );
-                  if (converted) {
-                    // Extract number from point name
-                    const pointNumber = point.name
-                      ? point.name.match(/\d+/)?.[0] || "?"
-                      : "?";
+                if (point.converted) {
+                  // Extract number from point name
+                  const pointNumber = point.name
+                    ? point.name.match(/\d+/)?.[0] || "?"
+                    : "?";
 
-                    // Create custom numbered icon
-                    const numberedIcon = L.divIcon({
-                      className: "custom-numbered-icon",
-                      iconSize: [30, 30],
-                      iconAnchor: [15, 30],
-                      popupAnchor: [0, -30],
-                      html: `<div style="
-                        background: #ff4444;
-                        color: white;
-                        width: 30px;
-                        height: 30px;
-                        border-radius: 50% 50% 50% 0;
-                        transform: rotate(-45deg);
-                        display: flex;
-                        align-items: center;
-                        justify-content: center;
-                        font-weight: bold;
-                        font-size: 12px;
-                        box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-                        border: 2px solid white;
-                      ">
-                        <span style="transform: rotate(45deg);">${pointNumber}</span>
-                      </div>`,
-                    });
+                  // Create custom numbered icon
+                  const numberedIcon = L.divIcon({
+                    className: "custom-numbered-icon",
+                    iconSize: [30, 30],
+                    iconAnchor: [15, 30],
+                    popupAnchor: [0, -30],
+                    html: `<div style="
+                      background: #ff4444;
+                      color: white;
+                      width: 30px;
+                      height: 30px;
+                      border-radius: 50% 50% 50% 0;
+                      transform: rotate(-45deg);
+                      display: flex;
+                      align-items: center;
+                      justify-content: center;
+                      font-weight: bold;
+                      font-size: 12px;
+                      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+                      border: 2px solid white;
+                    ">
+                      <span style="transform: rotate(45deg);">${pointNumber}</span>
+                    </div>`,
+                  });
 
-                    const marker = L.marker([converted.lat, converted.lng], {
+                  const marker = L.marker(
+                    [point.converted.lat, point.converted.lng],
+                    {
                       icon: numberedIcon,
+                    }
+                  )
+                    .on("click", function () {
+                      // Open Google Maps when marker is clicked
+                      window.open(
+                        `https://maps.google.com/?q=${point.converted.lat},${point.converted.lng}`,
+                        "_blank"
+                      );
                     })
-                      .on("click", function () {
-                        // Open Google Maps when marker is clicked
-                        window.open(
-                          `https://maps.google.com/?q=${converted.lat},${converted.lng}`,
-                          "_blank"
-                        );
-                      })
-                      .addTo(map);
+                    .addTo(map);
 
-                    // Store marker in array for later removal
-                    waypointMarkers.push(marker);
-                  }
+                  // Store marker in array for later removal
+                  waypointMarkers.push(marker);
                 }
               });
             }
@@ -496,6 +493,9 @@
             );
             showStatus(`Loading saved GPX: ${savedGpx.filename}`, 2000);
             processGpxContent(savedGpx.content, savedGpx.filename);
+          } else {
+            // No saved GPX, ensure buttons show load state
+            updateGpxButtonStates(false);
           }
         })
         .catch((error) => {
@@ -510,8 +510,19 @@
             );
             showStatus(`Loading saved GPX: ${savedGpx.filename}`, 2000);
             processGpxContent(savedGpx.content, savedGpx.filename);
+          } else {
+            // No saved GPX, ensure buttons show load state
+            updateGpxButtonStates(false);
           }
         });
+
+      // Initialize button states on page load
+      document.addEventListener("DOMContentLoaded", function () {
+        const savedGpx = loadGpxFromStorage();
+        if (!savedGpx) {
+          updateGpxButtonStates(false);
+        }
+      });
 
       // Function to calculate distance between two lat/lng points in meters
       function calculateDistance(lat1, lon1, lat2, lon2) {
@@ -534,40 +545,98 @@
         gpxTrackPoints,
         maxDistance = 50
       ) {
-        return jsonPoints.filter((jsonPoint) => {
-          if (
-            !jsonPoint.geom_point ||
-            !jsonPoint.geom_point[0] ||
-            !jsonPoint.geom_point[1]
-          ) {
-            return false;
-          }
+        // First pass: calculate minimum distance to GPX track for each JSON point
+        const pointsWithDistance = jsonPoints
+          .map((jsonPoint) => {
+            if (
+              !jsonPoint.geom_point ||
+              !jsonPoint.geom_point[0] ||
+              !jsonPoint.geom_point[1]
+            ) {
+              return null;
+            }
 
-          // Convert coordinates to WGS84
-          const converted = convertToWGS84(
-            jsonPoint.geom_point[0],
-            jsonPoint.geom_point[1]
+            // Convert coordinates to WGS84
+            const converted = convertToWGS84(
+              jsonPoint.geom_point[0],
+              jsonPoint.geom_point[1]
+            );
+            if (!converted) {
+              console.warn(
+                "Failed to convert coordinates for point:",
+                jsonPoint
+              );
+              return null;
+            }
+
+            const jsonLat = converted.lat;
+            const jsonLon = converted.lng;
+
+            // Find minimum distance to any GPX track point
+            let minDistance = Infinity;
+            gpxTrackPoints.forEach((gpxPoint) => {
+              const distance = calculateDistance(
+                jsonLat,
+                jsonLon,
+                gpxPoint.lat,
+                gpxPoint.lng
+              );
+              if (distance < minDistance) {
+                minDistance = distance;
+              }
+            });
+
+            return {
+              ...jsonPoint,
+              converted,
+              minDistanceToTrack: minDistance,
+            };
+          })
+          .filter(
+            (point) => point !== null && point.minDistanceToTrack <= maxDistance
           );
-          if (!converted) {
-            console.warn("Failed to convert coordinates for point:", jsonPoint);
-            return false;
-          }
 
-          const jsonLat = converted.lat;
-          const jsonLon = converted.lng;
+        // Second pass: remove points that are too close to each other, keeping only the closest to track
+        const filteredPoints = [];
+        const minSeparation = 25; // Minimum separation between points in meters
 
-          // Check if this point is within maxDistance of any GPX track point
-          return gpxTrackPoints.some((gpxPoint) => {
+        pointsWithDistance.forEach((point) => {
+          const tooClose = filteredPoints.some((existingPoint) => {
             const distance = calculateDistance(
-              jsonLat,
-              jsonLon,
-              gpxPoint.lat,
-              gpxPoint.lng
+              point.converted.lat,
+              point.converted.lng,
+              existingPoint.converted.lat,
+              existingPoint.converted.lng
+            );
+            return distance < minSeparation;
+          });
+
+          if (!tooClose) {
+            filteredPoints.push(point);
+          } else {
+            // If this point is closer to the track than existing nearby points, replace them
+            const nearbyPointIndex = filteredPoints.findIndex(
+              (existingPoint) => {
+                const distance = calculateDistance(
+                  point.converted.lat,
+                  point.converted.lng,
+                  existingPoint.converted.lat,
+                  existingPoint.converted.lng
+                );
+                return (
+                  distance < minSeparation &&
+                  point.minDistanceToTrack < existingPoint.minDistanceToTrack
+                );
+              }
             );
 
-            return distance <= maxDistance;
-          });
+            if (nearbyPointIndex !== -1) {
+              filteredPoints[nearbyPointIndex] = point;
+            }
+          }
         });
+
+        return filteredPoints;
       }
 
       // Load GPX
@@ -643,7 +712,7 @@
         }
       });
 
-      // Clear GPX buttons
+      // Clear GPX function
       function clearSavedGpx() {
         try {
           localStorage.removeItem("savedGpx");
@@ -655,21 +724,14 @@
           waypointMarkers.forEach((marker) => map.removeLayer(marker));
           waypointMarkers = [];
 
-          // Hide clear buttons since no GPX is loaded
-          updateClearButtonVisibility(false);
+          // Update buttons to show load option since no GPX is loaded
+          updateGpxButtonStates(false);
           showStatus("GPX and waypoints cleared");
         } catch (error) {
           console.error("Error clearing GPX from localStorage:", error);
           showStatus("Error clearing GPX");
         }
       }
-
-      document
-        .getElementById("clearGpx")
-        .addEventListener("click", clearSavedGpx);
-      document
-        .getElementById("clearGpxMobile")
-        .addEventListener("click", clearSavedGpx);
 
       // Status display function
       function showStatus(message, duration = 2000) {
