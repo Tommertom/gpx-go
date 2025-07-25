@@ -730,6 +730,12 @@ function clearSavedGpx() {
     waypointMarkers.forEach((marker) => map.removeLayer(marker));
     waypointMarkers = [];
 
+    // Clear the file input value so the same file can be selected again
+    const fileInput = document.getElementById("gpxFile");
+    if (fileInput) {
+      fileInput.value = "";
+    }
+
     // Update buttons to show load option since no GPX is loaded
     updateGpxButtonStates(false);
     showStatus("GPX and waypoints cleared");
