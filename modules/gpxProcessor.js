@@ -218,12 +218,6 @@ export class GPXProcessor {
 
         bounds = polyline.getBounds();
         window.gpxLayer = polyline;
-
-        // Add start and end markers for tracks
-        const startEndMarkers = this.markers.createStartEndMarkers(trackPoints);
-        startEndMarkers.forEach((marker) =>
-          this.markers.addWaypointMarker(marker)
-        );
       }
 
       // Handle waypoints

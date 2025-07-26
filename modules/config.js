@@ -17,9 +17,9 @@ export const CONFIG = {
   },
   GPX: {
     MARKER_OPTIONS: {
-      startIconUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-start.png",
-      endIconUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-icon-end.png",
-      shadowUrl: "https://unpkg.com/leaflet-gpx@1.5.1/pin-shadow.png",
+      startIconUrl: "",
+      endIconUrl: "",
+      shadowUrl: "",
     },
     POLYLINE_OPTIONS: {
       color: "blue",

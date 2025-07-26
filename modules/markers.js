@@ -71,25 +71,6 @@ export class MarkerFactory {
     return marker;
   }
 
-  createStartEndMarkers(trackPoints) {
-    const markers = [];
-    if (trackPoints.length > 1) {
-      const startPoint = trackPoints[0];
-      const endPoint = trackPoints[trackPoints.length - 1];
-
-      const startMarker = L.marker([startPoint.lat, startPoint.lng])
-        .bindPopup("Start")
-        .addTo(this.map);
-
-      const endMarker = L.marker([endPoint.lat, endPoint.lng])
-        .bindPopup("End")
-        .addTo(this.map);
-
-      markers.push(startMarker, endMarker);
-    }
-    return markers;
-  }
-
   createArrowIcon() {
     return L.divIcon({
       className: "",
