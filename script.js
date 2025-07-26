@@ -180,14 +180,27 @@ function processGpxContent(gpxText, filename = null) {
     })
       .on("loaded", function (e) {
         map.fitBounds(e.target.getBounds());
-        const statusMessage = `GPX loaded with ${trackPoints.length} track points`;
+        const statusMessage = `GPX loaded with ${
+          trackPoints.length
+        } track points${
+          waypoints.length > 0
+            ? ` and ${waypoints.length} waypoints - showing waypoints`
+            : ""
+        }`;
         showStatus(statusMessage);
 
         // Update buttons to show clear option since GPX is loaded
         updateGpxButtonStates(true);
 
-        // Filter JSON points by proximity to GPX track points
-        if (jsonPointsData && trackPoints.length > 0) {
+        // If GPX has waypoints, show them instead of JSON points
+        if (waypoints.length > 0) {
+          console.log(`Displaying ${waypoints.length} GPX waypoints`);
+          waypoints.forEach((waypoint, index) => {
+            const marker = createWaypointMarker(waypoint, index);
+            waypointMarkers.push(marker);
+          });
+        } else if (jsonPointsData && trackPoints.length > 0) {
+          // Only use JSON points if no waypoints in GPX
           const nearbyPoints = filterPointsByProximity(
             jsonPointsData,
             trackPoints,
@@ -209,23 +222,23 @@ function processGpxContent(gpxText, filename = null) {
               // Create custom numbered icon
               const numberedIcon = L.divIcon({
                 className: "custom-numbered-icon",
-                iconSize: [30, 30],
-                iconAnchor: [15, 30],
-                popupAnchor: [0, -30],
+                iconSize: [60, 60],
+                iconAnchor: [30, 60],
+                popupAnchor: [0, -60],
                 html: `<div style="
                 background: #ff4444;
                 color: white;
-                width: 30px;
-                height: 30px;
+                width: 60px;
+                height: 60px;
                 border-radius: 50% 50% 50% 0;
                 transform: rotate(-45deg);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-weight: bold;
-                font-size: 12px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-                border: 2px solid white;
+                font-size: 24px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                border: 4px solid white;
               ">
                 <span style="transform: rotate(45deg);">${pointNumber}</span>
               </div>`,
@@ -308,15 +321,11 @@ function processGpxContent(gpxText, filename = null) {
         }
       }
 
-      // Add waypoint markers - DISABLED
-      // We don't want to show the GPX waypoints on the map
-      /*
+      // Add waypoint markers if GPX has waypoints
       if (waypoints.length > 0) {
+        console.log(`Displaying ${waypoints.length} GPX waypoints (fallback)`);
         waypoints.forEach((waypoint, index) => {
-          const marker = L.marker([waypoint.lat, waypoint.lng])
-            .bindPopup(`<strong>${waypoint.name}</strong>`)
-            .addTo(map);
-
+          const marker = createWaypointMarker(waypoint, index);
           waypointMarkers.push(marker);
 
           // If no track points, use waypoints to set bounds
@@ -332,7 +341,6 @@ function processGpxContent(gpxText, filename = null) {
           }
         });
       }
-      */
 
       // If no track points but we have waypoints, use waypoints for bounds calculation only
       if (!bounds && waypoints.length > 0) {
@@ -351,15 +359,21 @@ function processGpxContent(gpxText, filename = null) {
       }
 
       const statusMessage = filename
-        ? `GPX loaded (fallback): ${filename} (${trackPoints.length} track points, ${waypoints.length} waypoints)`
-        : `GPX loaded (fallback) with ${trackPoints.length} track points, ${waypoints.length} waypoints`;
+        ? `GPX loaded (fallback): ${filename} (${
+            trackPoints.length
+          } track points, ${waypoints.length} waypoints${
+            waypoints.length > 0 ? " - showing waypoints" : ""
+          })`
+        : `GPX loaded (fallback) with ${trackPoints.length} track points, ${
+            waypoints.length
+          } waypoints${waypoints.length > 0 ? " - showing waypoints" : ""}`;
       showStatus(statusMessage);
 
       // Update buttons to show clear option since GPX is loaded
       updateGpxButtonStates(true);
 
-      // Handle proximity filtering for JSON points if available
-      if (jsonPointsData && trackPoints.length > 0) {
+      // Handle proximity filtering for JSON points if available (only if no waypoints)
+      if (waypoints.length === 0 && jsonPointsData && trackPoints.length > 0) {
         const nearbyPoints = filterPointsByProximity(
           jsonPointsData,
           trackPoints,
@@ -381,23 +395,23 @@ function processGpxContent(gpxText, filename = null) {
             // Create custom numbered icon
             const numberedIcon = L.divIcon({
               className: "custom-numbered-icon",
-              iconSize: [30, 30],
-              iconAnchor: [15, 30],
-              popupAnchor: [0, -30],
+              iconSize: [60, 60],
+              iconAnchor: [30, 60],
+              popupAnchor: [0, -60],
               html: `<div style="
                 background: #ff4444;
                 color: white;
-                width: 30px;
-                height: 30px;
+                width: 60px;
+                height: 60px;
                 border-radius: 50% 50% 50% 0;
                 transform: rotate(-45deg);
                 display: flex;
                 align-items: center;
                 justify-content: center;
                 font-weight: bold;
-                font-size: 12px;
-                box-shadow: 0 2px 5px rgba(0,0,0,0.3);
-                border: 2px solid white;
+                font-size: 24px;
+                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                border: 4px solid white;
               ">
                 <span style="transform: rotate(45deg);">${pointNumber}</span>
               </div>`,
@@ -554,6 +568,53 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
       Math.sin(dLon / 2);
   const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
+}
+
+// Function to create a GPX waypoint marker with the same style as JSON points
+function createWaypointMarker(waypoint, index) {
+  // Extract number from waypoint name, or use index + 1 as fallback
+  const pointNumber = waypoint.name
+    ? waypoint.name.match(/\d+/)?.[0] || (index + 1).toString()
+    : (index + 1).toString();
+
+  // Create custom numbered icon (same style as JSON points)
+  const numberedIcon = L.divIcon({
+    className: "custom-numbered-icon",
+    iconSize: [60, 60],
+    iconAnchor: [30, 60],
+    popupAnchor: [0, -60],
+    html: `<div style="
+      background: #ff4444;
+      color: white;
+      width: 60px;
+      height: 60px;
+      border-radius: 50% 50% 50% 0;
+      transform: rotate(-45deg);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: bold;
+      font-size: 24px;
+      box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+      border: 4px solid white;
+    ">
+      <span style="transform: rotate(45deg);">${pointNumber}</span>
+    </div>`,
+  });
+
+  const marker = L.marker([waypoint.lat, waypoint.lng], {
+    icon: numberedIcon,
+  })
+    .on("click", function () {
+      // Open Google Maps when marker is clicked (same behavior as JSON points)
+      window.open(
+        `https://maps.google.com/?q=${waypoint.lat},${waypoint.lng}`,
+        "_blank"
+      );
+    })
+    .addTo(map);
+
+  return marker;
 }
 
 // Function to filter points by proximity to GPX track points
