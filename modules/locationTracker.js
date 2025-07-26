@@ -90,35 +90,74 @@ export class LocationTracker {
   }
 
   initCompass() {
-    if (window.DeviceOrientationEvent) {
-      if (typeof DeviceOrientationEvent.requestPermission === "function") {
-        DeviceOrientationEvent.requestPermission()
-          .then((permissionState) => {
-            if (permissionState === "granted") {
-              window.addEventListener(
-                "deviceorientation",
-                (event) => this.handleOrientation(event),
-                true
-              );
-            }
-          })
-          .catch(console.error);
-      } else {
-        window.addEventListener(
-          "deviceorientation",
-          (event) => this.handleOrientation(event),
-          true
-        );
-      }
+    console.log("Initializing compass...");
+
+    if (!window.DeviceOrientationEvent) {
+      console.log("DeviceOrientationEvent not supported");
+      this.ui.showStatus("Compass not supported on this device", 3000);
+      return;
+    }
+
+    console.log("DeviceOrientationEvent supported");
+
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      console.log("iOS 13+ permission model detected");
+      DeviceOrientationEvent.requestPermission()
+        .then((permissionState) => {
+          console.log("Permission state:", permissionState);
+          if (permissionState === "granted") {
+            console.log("Permission granted, adding event listener");
+            window.addEventListener(
+              "deviceorientation",
+              (event) => this.handleOrientation(event),
+              true
+            );
+            this.ui.showStatus("Compass permission granted", 2000);
+          } else {
+            console.log("Permission denied");
+            this.ui.showStatus("Compass permission denied", 3000);
+          }
+        })
+        .catch((error) => {
+          console.error("Error requesting permission:", error);
+          this.ui.showStatus("Error requesting compass permission", 3000);
+        });
+    } else {
+      console.log("No permission request needed, adding event listener");
+      window.addEventListener(
+        "deviceorientation",
+        (event) => this.handleOrientation(event),
+        true
+      );
     }
   }
 
   handleOrientation(event) {
+    console.log("Orientation event received:", {
+      alpha: event.alpha,
+      beta: event.beta,
+      gamma: event.gamma,
+      absolute: event.absolute,
+      webkitCompassHeading: event.webkitCompassHeading,
+    });
+
     let heading = null;
 
     if (event.absolute || event.webkitCompassHeading !== undefined) {
-      heading = event.webkitCompassHeading || 360 - event.alpha;
-      this.heading = heading;
+      if (event.webkitCompassHeading !== undefined) {
+        heading = event.webkitCompassHeading;
+        console.log("Using webkitCompassHeading:", heading);
+      } else if (event.alpha !== null) {
+        heading = 360 - event.alpha;
+        console.log("Using calculated heading from alpha:", heading);
+      }
+
+      if (heading !== null) {
+        this.heading = heading;
+        console.log("Final heading set to:", this.heading);
+      }
+    } else {
+      console.log("No valid orientation data available");
     }
 
     this.ui.updateCompassDisplay(heading);
@@ -130,5 +169,27 @@ export class LocationTracker {
 
   getUserMarker() {
     return this.userMarker;
+  }
+
+  // Debug method to manually request compass permission
+  requestCompassPermission() {
+    if (typeof DeviceOrientationEvent.requestPermission === "function") {
+      console.log("Manually requesting compass permission...");
+      return DeviceOrientationEvent.requestPermission()
+        .then((permissionState) => {
+          console.log("Manual permission state:", permissionState);
+          this.ui.showStatus(`Compass permission: ${permissionState}`, 3000);
+          return permissionState;
+        })
+        .catch((error) => {
+          console.error("Manual permission error:", error);
+          this.ui.showStatus("Error requesting compass permission", 3000);
+          throw error;
+        });
+    } else {
+      console.log("No permission request needed");
+      this.ui.showStatus("No permission request needed", 2000);
+      return Promise.resolve("granted");
+    }
   }
 }

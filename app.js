@@ -64,6 +64,11 @@ export class GPXApp {
     document.getElementById("centerMap").addEventListener("click", () => {
       this.handleCenterMap();
     });
+
+    // Compass debug button
+    document.getElementById("compassDebug").addEventListener("click", () => {
+      this.handleCompassDebug();
+    });
   }
 
   setupGpxButtons() {
@@ -198,6 +203,38 @@ export class GPXApp {
     } else {
       this.ui.showStatus("No location or route to center on");
     }
+  }
+
+  async handleCompassDebug() {
+    console.log("=== COMPASS DEBUG START ===");
+
+    // Check if DeviceOrientationEvent is available
+    console.log(
+      "DeviceOrientationEvent support:",
+      !!window.DeviceOrientationEvent
+    );
+
+    // Check if permission API is available
+    console.log(
+      "Permission API available:",
+      typeof DeviceOrientationEvent?.requestPermission === "function"
+    );
+
+    // Check current protocol
+    console.log("Current protocol:", window.location.protocol);
+    console.log("Is HTTPS:", window.location.protocol === "https:");
+
+    // Test compass permission
+    try {
+      await this.locationTracker.requestCompassPermission();
+    } catch (error) {
+      console.error("Compass permission error:", error);
+    }
+
+    // Force re-initialization of compass
+    this.locationTracker.initCompass();
+
+    console.log("=== COMPASS DEBUG END ===");
   }
 }
 
