@@ -70,13 +70,14 @@ export class UIController {
       `;
 
       const fileInfo = document.createElement("div");
+      fileInfo.className = "gpx-file-info";
       fileInfo.style.cssText = `
         flex: 1;
         cursor: pointer;
       `;
 
       fileInfo.innerHTML = `
-        <div style="font-weight: bold; margin-bottom: 4px;">${
+        <div class="gpx-file-name" style="font-weight: bold; margin-bottom: 4px;">${
           gpxFile.displayName
         }</div>
         <div style="font-size: 0.9em; color: #666;">

@@ -69,10 +69,27 @@ export class StorageManager {
           if (savedData) {
             try {
               const gpxData = JSON.parse(savedData);
+
+              // Create clean display name: remove .gpx extension, numbers, and non-alphabet characters
+              let cleanName = filename.replace(".gpx", "");
+              // Remove numbers and non-alphabet characters, keep spaces and hyphens for readability
+              cleanName = cleanName.replace(/[^a-zA-Z\s-]/g, "");
+              // Replace multiple spaces/hyphens with single space and trim
+              cleanName = cleanName.replace(/[\s-]+/g, " ").trim();
+              // If the cleaned name is empty, use "GPX File" as fallback
+              if (!cleanName) {
+                cleanName = "GPX File";
+              }
+              // Capitalize the first character
+              if (cleanName.length > 0) {
+                cleanName =
+                  cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+              }
+
               gpxFiles.push({
                 filename: filename,
                 timestamp: gpxData.timestamp || 0,
-                displayName: filename.replace(".gpx", ""),
+                displayName: cleanName,
               });
             } catch (parseError) {
               console.warn(

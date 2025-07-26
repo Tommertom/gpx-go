@@ -103,6 +103,21 @@ button {
   background: #c82333 !important;
 }
 
+/* GPX file name overflow handling */
+.gpx-file-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
+}
+
+/* GPX file info container to ensure proper text overflow */
+.gpx-file-info {
+  flex: 1;
+  min-width: 0; /* Allow flex item to shrink below content size */
+  overflow: hidden;
+}
+
 button:active {
   background: #45a049;
   transform: scale(0.98);
