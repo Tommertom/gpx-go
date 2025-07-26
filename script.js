@@ -672,6 +672,7 @@ let userMarker = null;
 let heading = 0;
 let followMode = false;
 let initialLocationSet = false;
+let watchId = null;
 
 // Arrow icon
 const arrowIcon = L.divIcon({
@@ -683,6 +684,57 @@ const arrowIcon = L.divIcon({
          </svg>`,
 });
 
+// Function to start watching position
+function startWatchingPosition() {
+  if (!navigator.geolocation) {
+    showStatus("Geolocation not supported by this device", 3000);
+    return;
+  }
+
+  if (watchId !== null) {
+    return; // Already watching
+  }
+
+  watchId = navigator.geolocation.watchPosition(
+    (pos) => {
+      const latlng = [pos.coords.latitude, pos.coords.longitude];
+
+      if (!userMarker) {
+        userMarker = L.marker(latlng, {
+          icon: arrowIcon,
+        }).addTo(map);
+
+        // Center map on user's location when first detected
+        if (!initialLocationSet) {
+          map.setView(latlng, 16); // Higher zoom for mobile
+          initialLocationSet = true;
+        } else if (followMode) {
+          map.setView(latlng, map.getZoom()); // Maintain current zoom level
+        }
+      } else {
+        userMarker.setLatLng(latlng);
+        if (followMode) map.setView(latlng, map.getZoom()); // Maintain current zoom
+      }
+    },
+    (err) => {
+      console.error("Geolocation error:", err);
+      showStatus("Location access denied or unavailable", 3000);
+    },
+    {
+      enableHighAccuracy: true,
+      maximumAge: 1000,
+    }
+  );
+}
+
+// Function to stop watching position
+function stopWatchingPosition() {
+  if (watchId !== null && navigator.geolocation) {
+    navigator.geolocation.clearWatch(watchId);
+    watchId = null;
+  }
+}
+
 // Follow mode toggle (for both desktop and mobile)
 function toggleFollowMode() {
   followMode = !followMode;
@@ -693,8 +745,15 @@ function toggleFollowMode() {
   // Show status
   showStatus(followMode ? "Follow mode enabled" : "Follow mode disabled");
 
-  if (followMode && userMarker) {
-    map.setView(userMarker.getLatLng());
+  if (followMode) {
+    // Start watching position when follow mode is enabled
+    startWatchingPosition();
+    if (userMarker) {
+      map.setView(userMarker.getLatLng());
+    }
+  } else {
+    // Stop watching position when follow mode is disabled
+    stopWatchingPosition();
   }
 }
 
@@ -713,6 +772,8 @@ document.getElementById("centerMap").addEventListener("click", () => {
   } else if (window.gpxLayer) {
     map.fitBounds(window.gpxLayer.getBounds());
     showStatus("Centered on GPX route");
+  } else if (!followMode) {
+    showStatus("Enable follow mode to track your location");
   } else {
     showStatus("No location or route to center on");
   }
@@ -753,42 +814,6 @@ function showStatus(message, duration = 2000) {
   setTimeout(() => {
     status.style.display = "none";
   }, duration);
-}
-
-// Watch position
-if (navigator.geolocation) {
-  navigator.geolocation.watchPosition(
-    (pos) => {
-      const latlng = [pos.coords.latitude, pos.coords.longitude];
-
-      if (!userMarker) {
-        userMarker = L.marker(latlng, {
-          icon: arrowIcon,
-        }).addTo(map);
-
-        // Center map on user's location when first detected
-        if (!initialLocationSet) {
-          map.setView(latlng, 16); // Higher zoom for mobile
-          initialLocationSet = true;
-        } else if (followMode) {
-          map.setView(latlng, map.getZoom()); // Maintain current zoom level
-        }
-      } else {
-        userMarker.setLatLng(latlng);
-        if (followMode) map.setView(latlng, map.getZoom()); // Maintain current zoom
-      }
-    },
-    (err) => {
-      console.error("Geolocation error:", err);
-      showStatus("Location access denied or unavailable", 3000);
-    },
-    {
-      enableHighAccuracy: true,
-      maximumAge: 1000,
-    }
-  );
-} else {
-  showStatus("Geolocation not supported by this device", 3000);
 }
 
 // Handle compass heading
