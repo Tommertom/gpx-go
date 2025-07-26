@@ -206,35 +206,48 @@ export class GPXApp {
   }
 
   async handleCompassDebug() {
-    console.log("=== COMPASS DEBUG START ===");
+    // Toggle debug display
+    this.ui.toggleDebugDisplay();
+
+    this.ui.showDebugInfo("=== 🔍 COMPASS DEBUG START ===");
 
     // Check if DeviceOrientationEvent is available
-    console.log(
-      "DeviceOrientationEvent support:",
-      !!window.DeviceOrientationEvent
+    const deviceOrientationSupport = !!window.DeviceOrientationEvent;
+    this.ui.showDebugInfo(
+      `📱 DeviceOrientationEvent support: ${
+        deviceOrientationSupport ? "✅" : "❌"
+      }`
     );
 
     // Check if permission API is available
-    console.log(
-      "Permission API available:",
-      typeof DeviceOrientationEvent?.requestPermission === "function"
+    const permissionApiAvailable =
+      typeof DeviceOrientationEvent?.requestPermission === "function";
+    this.ui.showDebugInfo(
+      `🔐 Permission API available: ${permissionApiAvailable ? "✅" : "❌"}`
     );
 
     // Check current protocol
-    console.log("Current protocol:", window.location.protocol);
-    console.log("Is HTTPS:", window.location.protocol === "https:");
+    this.ui.showDebugInfo(`🔒 Current protocol: ${window.location.protocol}`);
+    this.ui.showDebugInfo(
+      `🔒 Is HTTPS: ${window.location.protocol === "https:" ? "✅" : "❌"}`
+    );
+
+    // Check user agent for iOS
+    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+    this.ui.showDebugInfo(`🍎 Is iOS: ${isIOS ? "✅" : "❌"}`);
 
     // Test compass permission
     try {
       await this.locationTracker.requestCompassPermission();
     } catch (error) {
-      console.error("Compass permission error:", error);
+      this.ui.showDebugInfo(`❌ Compass permission error: ${error.message}`);
     }
 
     // Force re-initialization of compass
+    this.ui.showDebugInfo("🔄 Re-initializing compass...");
     this.locationTracker.initCompass();
 
-    console.log("=== COMPASS DEBUG END ===");
+    this.ui.showDebugInfo("=== 🏁 COMPASS DEBUG END ===");
   }
 }
 

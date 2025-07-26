@@ -83,4 +83,48 @@ export class UIController {
     document.getElementById("toggleFollow").textContent = followText;
     document.getElementById("toggleFollowMobile").textContent = followText;
   }
+
+  showDebugInfo(message) {
+    const debugDiv = document.getElementById("debug-info");
+    const debugContent = document.getElementById("debug-content");
+
+    if (debugDiv && debugContent) {
+      // Show the debug area
+      debugDiv.style.display = "block";
+
+      // Add timestamp to message
+      const timestamp = new Date().toLocaleTimeString();
+      const formattedMessage = `[${timestamp}] ${message}`;
+
+      // Add new message to the top
+      const messageDiv = document.createElement("div");
+      messageDiv.textContent = formattedMessage;
+      messageDiv.style.marginBottom = "2px";
+
+      debugContent.insertBefore(messageDiv, debugContent.firstChild);
+
+      // Keep only last 10 messages
+      while (debugContent.children.length > 10) {
+        debugContent.removeChild(debugContent.lastChild);
+      }
+
+      // Auto-scroll to top
+      debugDiv.scrollTop = 0;
+    }
+  }
+
+  toggleDebugDisplay() {
+    const debugDiv = document.getElementById("debug-info");
+    if (debugDiv) {
+      debugDiv.style.display =
+        debugDiv.style.display === "none" ? "block" : "none";
+    }
+  }
+
+  clearDebugInfo() {
+    const debugContent = document.getElementById("debug-content");
+    if (debugContent) {
+      debugContent.innerHTML = "";
+    }
+  }
 }

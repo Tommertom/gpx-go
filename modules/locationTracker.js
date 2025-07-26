@@ -90,23 +90,25 @@ export class LocationTracker {
   }
 
   initCompass() {
-    console.log("Initializing compass...");
+    this.ui.showDebugInfo("🧭 Initializing compass...");
 
     if (!window.DeviceOrientationEvent) {
-      console.log("DeviceOrientationEvent not supported");
+      this.ui.showDebugInfo("❌ DeviceOrientationEvent not supported");
       this.ui.showStatus("Compass not supported on this device", 3000);
       return;
     }
 
-    console.log("DeviceOrientationEvent supported");
+    this.ui.showDebugInfo("✅ DeviceOrientationEvent supported");
 
     if (typeof DeviceOrientationEvent.requestPermission === "function") {
-      console.log("iOS 13+ permission model detected");
+      this.ui.showDebugInfo("📱 iOS 13+ permission model detected");
       DeviceOrientationEvent.requestPermission()
         .then((permissionState) => {
-          console.log("Permission state:", permissionState);
+          this.ui.showDebugInfo(`🔐 Permission state: ${permissionState}`);
           if (permissionState === "granted") {
-            console.log("Permission granted, adding event listener");
+            this.ui.showDebugInfo(
+              "✅ Permission granted, adding event listener"
+            );
             window.addEventListener(
               "deviceorientation",
               (event) => this.handleOrientation(event),
@@ -114,16 +116,20 @@ export class LocationTracker {
             );
             this.ui.showStatus("Compass permission granted", 2000);
           } else {
-            console.log("Permission denied");
+            this.ui.showDebugInfo("❌ Permission denied");
             this.ui.showStatus("Compass permission denied", 3000);
           }
         })
         .catch((error) => {
-          console.error("Error requesting permission:", error);
+          this.ui.showDebugInfo(
+            `❌ Error requesting permission: ${error.message}`
+          );
           this.ui.showStatus("Error requesting compass permission", 3000);
         });
     } else {
-      console.log("No permission request needed, adding event listener");
+      this.ui.showDebugInfo(
+        "✅ No permission request needed, adding event listener"
+      );
       window.addEventListener(
         "deviceorientation",
         (event) => this.handleOrientation(event),
@@ -133,31 +139,45 @@ export class LocationTracker {
   }
 
   handleOrientation(event) {
-    console.log("Orientation event received:", {
+    const debugInfo = {
       alpha: event.alpha,
       beta: event.beta,
       gamma: event.gamma,
       absolute: event.absolute,
       webkitCompassHeading: event.webkitCompassHeading,
-    });
+    };
+
+    this.ui.showDebugInfo(
+      `📡 Orientation: α=${event.alpha?.toFixed(1)} β=${event.beta?.toFixed(
+        1
+      )} γ=${event.gamma?.toFixed(1)} abs=${
+        event.absolute
+      } webkit=${event.webkitCompassHeading?.toFixed(1)}`
+    );
 
     let heading = null;
 
     if (event.absolute || event.webkitCompassHeading !== undefined) {
       if (event.webkitCompassHeading !== undefined) {
         heading = event.webkitCompassHeading;
-        console.log("Using webkitCompassHeading:", heading);
+        this.ui.showDebugInfo(
+          `🧭 Using webkitCompassHeading: ${heading.toFixed(1)}°`
+        );
       } else if (event.alpha !== null) {
         heading = 360 - event.alpha;
-        console.log("Using calculated heading from alpha:", heading);
+        this.ui.showDebugInfo(
+          `🧭 Using calculated heading from alpha: ${heading.toFixed(1)}°`
+        );
       }
 
       if (heading !== null) {
         this.heading = heading;
-        console.log("Final heading set to:", this.heading);
+        this.ui.showDebugInfo(
+          `✅ Final heading set to: ${this.heading.toFixed(1)}°`
+        );
       }
     } else {
-      console.log("No valid orientation data available");
+      this.ui.showDebugInfo("❌ No valid orientation data available");
     }
 
     this.ui.updateCompassDisplay(heading);
@@ -174,20 +194,22 @@ export class LocationTracker {
   // Debug method to manually request compass permission
   requestCompassPermission() {
     if (typeof DeviceOrientationEvent.requestPermission === "function") {
-      console.log("Manually requesting compass permission...");
+      this.ui.showDebugInfo("🔄 Manually requesting compass permission...");
       return DeviceOrientationEvent.requestPermission()
         .then((permissionState) => {
-          console.log("Manual permission state:", permissionState);
+          this.ui.showDebugInfo(
+            `🔐 Manual permission state: ${permissionState}`
+          );
           this.ui.showStatus(`Compass permission: ${permissionState}`, 3000);
           return permissionState;
         })
         .catch((error) => {
-          console.error("Manual permission error:", error);
+          this.ui.showDebugInfo(`❌ Manual permission error: ${error.message}`);
           this.ui.showStatus("Error requesting compass permission", 3000);
           throw error;
         });
     } else {
-      console.log("No permission request needed");
+      this.ui.showDebugInfo("ℹ️ No permission request needed");
       this.ui.showStatus("No permission request needed", 2000);
       return Promise.resolve("granted");
     }
