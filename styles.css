@@ -143,6 +143,26 @@ textarea {
   display: none;
 }
 
+/* Compass direction display */
+#compass-direction {
+  position: absolute;
+  top: 10px;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.8);
+  color: white;
+  padding: 8px 16px;
+  border-radius: 6px;
+  z-index: 1000;
+  font-size: 18px;
+  font-weight: bold;
+  text-align: center;
+  min-width: 60px;
+  display: none;
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
 @media (max-width: 768px) {
   #status {
     top: 10px;
@@ -150,5 +170,11 @@ textarea {
     right: auto;
     transform: translateX(-50%);
     min-width: 200px;
+  }
+
+  #compass-direction {
+    top: 80px;
+    left: 10px;
+    transform: none;
   }
 }

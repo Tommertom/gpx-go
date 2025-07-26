@@ -17,17 +17,63 @@ function saveGpxToStorage(gpxContent, filename) {
       filename: filename,
       timestamp: Date.now(),
     };
-    localStorage.setItem("savedGpx", JSON.stringify(gpxData));
-    console.log("GPX saved to localStorage");
+
+    // Store the GPX content using filename as key
+    localStorage.setItem(`gpx_${filename}`, JSON.stringify(gpxData));
+
+    // Store the current filename reference
+    localStorage.setItem("last_gpx", filename);
+
+    console.log(`GPX saved to localStorage with key: gpx_${filename}`);
   } catch (error) {
     console.error("Error saving GPX to localStorage:", error);
   }
 }
 
+// Function to save waypoints to localStorage
+function saveWaypointsToStorage(waypoints, filename) {
+  try {
+    const waypointData = {
+      waypoints: waypoints,
+      filename: filename,
+      timestamp: Date.now(),
+    };
+
+    localStorage.setItem(`gpx_${filename}_wp`, JSON.stringify(waypointData));
+    console.log(`Waypoints saved to localStorage with key: gpx_${filename}_wp`);
+  } catch (error) {
+    console.error("Error saving waypoints to localStorage:", error);
+  }
+}
+
+// Function to load waypoints from localStorage
+function loadWaypointsFromStorage(filename) {
+  try {
+    const savedData = localStorage.getItem(`gpx_${filename}_wp`);
+    if (savedData) {
+      const waypointData = JSON.parse(savedData);
+      console.log(
+        `Loaded ${waypointData.waypoints.length} waypoints from localStorage for ${filename}`
+      );
+      return waypointData.waypoints;
+    }
+  } catch (error) {
+    console.error("Error loading waypoints from localStorage:", error);
+  }
+  return null;
+}
+
 // Function to load GPX from localStorage
 function loadGpxFromStorage() {
   try {
-    const savedData = localStorage.getItem("savedGpx");
+    // Get the last GPX filename
+    const lastGpxFilename = localStorage.getItem("last_gpx");
+    if (!lastGpxFilename) {
+      return null;
+    }
+
+    // Get the GPX data using the filename
+    const savedData = localStorage.getItem(`gpx_${lastGpxFilename}`);
     if (savedData) {
       const gpxData = JSON.parse(savedData);
       return gpxData;
@@ -36,6 +82,47 @@ function loadGpxFromStorage() {
     console.error("Error loading GPX from localStorage:", error);
   }
   return null;
+}
+
+// Function to clean up old GPX files in localStorage (optional utility)
+function cleanupOldGpxFiles() {
+  try {
+    const lastGpxFilename = localStorage.getItem("last_gpx");
+    const keysToRemove = [];
+
+    // Find all GPX keys in localStorage
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith("gpx_")) {
+        // Extract filename - handle both regular GPX files and waypoint files
+        let filename;
+        if (key.endsWith("_wp")) {
+          filename = key.substring(4, key.length - 3); // Remove "gpx_" prefix and "_wp" suffix
+        } else {
+          filename = key.substring(4); // Remove "gpx_" prefix
+        }
+
+        // If this isn't the current GPX file, mark for removal
+        if (filename !== lastGpxFilename) {
+          keysToRemove.push(key);
+        }
+      }
+    }
+
+    // Remove old GPX files and their waypoints
+    keysToRemove.forEach((key) => {
+      localStorage.removeItem(key);
+      console.log(`Cleaned up old GPX file: ${key}`);
+    });
+
+    if (keysToRemove.length > 0) {
+      console.log(
+        `Cleaned up ${keysToRemove.length} old GPX files and waypoints`
+      );
+    }
+  } catch (error) {
+    console.error("Error cleaning up old GPX files:", error);
+  }
 }
 
 // Function to update GPX button states
@@ -201,68 +288,137 @@ function processGpxContent(gpxText, filename = null) {
           });
         } else if (jsonPointsData && trackPoints.length > 0) {
           // Only use JSON points if no waypoints in GPX
-          const nearbyPoints = filterPointsByProximity(
-            jsonPointsData,
-            trackPoints,
-            50
-          );
-          console.log(
-            `Found ${nearbyPoints.length} points within 50m of GPX route:`,
-            nearbyPoints
+          // First check if we have cached waypoints for this GPX file
+          const cachedWaypoints = loadWaypointsFromStorage(
+            filename || "unknown"
           );
 
-          // Add markers for nearby points
-          nearbyPoints.forEach((point) => {
-            if (point.converted) {
-              // Extract number from point name
-              const pointNumber = point.name
-                ? point.name.match(/\d+/)?.[0] || "?"
-                : "?";
+          if (cachedWaypoints && cachedWaypoints.length > 0) {
+            console.log(
+              `Using ${cachedWaypoints.length} cached waypoints from localStorage`
+            );
+            // Display cached waypoints
+            cachedWaypoints.forEach((point) => {
+              if (point.converted) {
+                // Extract number from point name
+                const pointNumber = point.name
+                  ? point.name.match(/\d+/)?.[0] || "?"
+                  : "?";
 
-              // Create custom numbered icon
-              const numberedIcon = L.divIcon({
-                className: "custom-numbered-icon",
-                iconSize: [60, 60],
-                iconAnchor: [30, 60],
-                popupAnchor: [0, -60],
-                html: `<div style="
-                background: #ff4444;
-                color: white;
-                width: 60px;
-                height: 60px;
-                border-radius: 50% 50% 50% 0;
-                transform: rotate(-45deg);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                font-size: 24px;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-                border: 4px solid white;
-              ">
-                <span style="transform: rotate(45deg);">${pointNumber}</span>
-              </div>`,
-              });
+                // Create custom numbered icon
+                const numberedIcon = L.divIcon({
+                  className: "custom-numbered-icon",
+                  iconSize: [60, 60],
+                  iconAnchor: [30, 60],
+                  popupAnchor: [0, -60],
+                  html: `<div style="
+                  background: #ff4444;
+                  color: white;
+                  width: 60px;
+                  height: 60px;
+                  border-radius: 50% 50% 50% 0;
+                  transform: rotate(-45deg);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-weight: bold;
+                  font-size: 24px;
+                  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                  border: 4px solid white;
+                ">
+                  <span style="transform: rotate(45deg);">${pointNumber}</span>
+                </div>`,
+                });
 
-              const marker = L.marker(
-                [point.converted.lat, point.converted.lng],
-                {
-                  icon: numberedIcon,
-                }
-              )
-                .on("click", function () {
-                  // Open Google Maps when marker is clicked
-                  window.open(
-                    `https://maps.google.com/?q=${point.converted.lat},${point.converted.lng}`,
-                    "_blank"
-                  );
-                })
-                .addTo(map);
+                const marker = L.marker(
+                  [point.converted.lat, point.converted.lng],
+                  {
+                    icon: numberedIcon,
+                  }
+                )
+                  .on("click", function () {
+                    // Open Google Maps when marker is clicked
+                    window.open(
+                      `https://maps.google.com/?q=${point.converted.lat},${point.converted.lng}`,
+                      "_blank"
+                    );
+                  })
+                  .addTo(map);
 
-              // Store marker in array for later removal
-              waypointMarkers.push(marker);
+                // Store marker in array for later removal
+                waypointMarkers.push(marker);
+              }
+            });
+          } else {
+            // No cached waypoints, calculate new ones
+            const nearbyPoints = filterPointsByProximity(
+              jsonPointsData,
+              trackPoints,
+              50
+            );
+            console.log(
+              `Found ${nearbyPoints.length} points within 50m of GPX route:`,
+              nearbyPoints
+            );
+
+            // Save the calculated waypoints to localStorage
+            if (nearbyPoints.length > 0 && filename) {
+              saveWaypointsToStorage(nearbyPoints, filename);
             }
-          });
+
+            // Add markers for nearby points
+            nearbyPoints.forEach((point) => {
+              if (point.converted) {
+                // Extract number from point name
+                const pointNumber = point.name
+                  ? point.name.match(/\d+/)?.[0] || "?"
+                  : "?";
+
+                // Create custom numbered icon
+                const numberedIcon = L.divIcon({
+                  className: "custom-numbered-icon",
+                  iconSize: [60, 60],
+                  iconAnchor: [30, 60],
+                  popupAnchor: [0, -60],
+                  html: `<div style="
+                  background: #ff4444;
+                  color: white;
+                  width: 60px;
+                  height: 60px;
+                  border-radius: 50% 50% 50% 0;
+                  transform: rotate(-45deg);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-weight: bold;
+                  font-size: 24px;
+                  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                  border: 4px solid white;
+                ">
+                  <span style="transform: rotate(45deg);">${pointNumber}</span>
+                </div>`,
+                });
+
+                const marker = L.marker(
+                  [point.converted.lat, point.converted.lng],
+                  {
+                    icon: numberedIcon,
+                  }
+                )
+                  .on("click", function () {
+                    // Open Google Maps when marker is clicked
+                    window.open(
+                      `https://maps.google.com/?q=${point.converted.lat},${point.converted.lng}`,
+                      "_blank"
+                    );
+                  })
+                  .addTo(map);
+
+                // Store marker in array for later removal
+                waypointMarkers.push(marker);
+              }
+            });
+          }
         }
       })
       .on("addpoint", function (e) {
@@ -374,68 +530,135 @@ function processGpxContent(gpxText, filename = null) {
 
       // Handle proximity filtering for JSON points if available (only if no waypoints)
       if (waypoints.length === 0 && jsonPointsData && trackPoints.length > 0) {
-        const nearbyPoints = filterPointsByProximity(
-          jsonPointsData,
-          trackPoints,
-          50
-        );
-        console.log(
-          `Found ${nearbyPoints.length} points within 50m of GPX route:`,
-          nearbyPoints
-        );
+        // First check if we have cached waypoints for this GPX file
+        const cachedWaypoints = loadWaypointsFromStorage(filename || "unknown");
 
-        // Add markers for nearby points
-        nearbyPoints.forEach((point) => {
-          if (point.converted) {
-            // Extract number from point name
-            const pointNumber = point.name
-              ? point.name.match(/\d+/)?.[0] || "?"
-              : "?";
+        if (cachedWaypoints && cachedWaypoints.length > 0) {
+          console.log(
+            `Using ${cachedWaypoints.length} cached waypoints from localStorage (fallback)`
+          );
+          // Display cached waypoints
+          cachedWaypoints.forEach((point) => {
+            if (point.converted) {
+              // Extract number from point name
+              const pointNumber = point.name
+                ? point.name.match(/\d+/)?.[0] || "?"
+                : "?";
 
-            // Create custom numbered icon
-            const numberedIcon = L.divIcon({
-              className: "custom-numbered-icon",
-              iconSize: [60, 60],
-              iconAnchor: [30, 60],
-              popupAnchor: [0, -60],
-              html: `<div style="
-                background: #ff4444;
-                color: white;
-                width: 60px;
-                height: 60px;
-                border-radius: 50% 50% 50% 0;
-                transform: rotate(-45deg);
-                display: flex;
-                align-items: center;
-                justify-content: center;
-                font-weight: bold;
-                font-size: 24px;
-                box-shadow: 0 4px 10px rgba(0,0,0,0.3);
-                border: 4px solid white;
-              ">
-                <span style="transform: rotate(45deg);">${pointNumber}</span>
-              </div>`,
-            });
+              // Create custom numbered icon
+              const numberedIcon = L.divIcon({
+                className: "custom-numbered-icon",
+                iconSize: [60, 60],
+                iconAnchor: [30, 60],
+                popupAnchor: [0, -60],
+                html: `<div style="
+                  background: #ff4444;
+                  color: white;
+                  width: 60px;
+                  height: 60px;
+                  border-radius: 50% 50% 50% 0;
+                  transform: rotate(-45deg);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-weight: bold;
+                  font-size: 24px;
+                  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                  border: 4px solid white;
+                ">
+                  <span style="transform: rotate(45deg);">${pointNumber}</span>
+                </div>`,
+              });
 
-            const marker = L.marker(
-              [point.converted.lat, point.converted.lng],
-              {
-                icon: numberedIcon,
-              }
-            )
-              .on("click", function () {
-                // Open Google Maps when marker is clicked
-                window.open(
-                  `https://maps.google.com/?q=${point.converted.lat},${point.converted.lng}`,
-                  "_blank"
-                );
-              })
-              .addTo(map);
+              const marker = L.marker(
+                [point.converted.lat, point.converted.lng],
+                {
+                  icon: numberedIcon,
+                }
+              )
+                .on("click", function () {
+                  // Open Google Maps when marker is clicked
+                  window.open(
+                    `https://maps.google.com/?q=${point.converted.lat},${point.converted.lng}`,
+                    "_blank"
+                  );
+                })
+                .addTo(map);
 
-            // Store marker in array for later removal
-            waypointMarkers.push(marker);
+              // Store marker in array for later removal
+              waypointMarkers.push(marker);
+            }
+          });
+        } else {
+          // No cached waypoints, calculate new ones
+          const nearbyPoints = filterPointsByProximity(
+            jsonPointsData,
+            trackPoints,
+            50
+          );
+          console.log(
+            `Found ${nearbyPoints.length} points within 50m of GPX route:`,
+            nearbyPoints
+          );
+
+          // Save the calculated waypoints to localStorage
+          if (nearbyPoints.length > 0 && filename) {
+            saveWaypointsToStorage(nearbyPoints, filename);
           }
-        });
+
+          // Add markers for nearby points
+          nearbyPoints.forEach((point) => {
+            if (point.converted) {
+              // Extract number from point name
+              const pointNumber = point.name
+                ? point.name.match(/\d+/)?.[0] || "?"
+                : "?";
+
+              // Create custom numbered icon
+              const numberedIcon = L.divIcon({
+                className: "custom-numbered-icon",
+                iconSize: [60, 60],
+                iconAnchor: [30, 60],
+                popupAnchor: [0, -60],
+                html: `<div style="
+                  background: #ff4444;
+                  color: white;
+                  width: 60px;
+                  height: 60px;
+                  border-radius: 50% 50% 50% 0;
+                  transform: rotate(-45deg);
+                  display: flex;
+                  align-items: center;
+                  justify-content: center;
+                  font-weight: bold;
+                  font-size: 24px;
+                  box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+                  border: 4px solid white;
+                ">
+                  <span style="transform: rotate(45deg);">${pointNumber}</span>
+                </div>`,
+              });
+
+              const marker = L.marker(
+                [point.converted.lat, point.converted.lng],
+                {
+                  icon: numberedIcon,
+                }
+              )
+                .on("click", function () {
+                  // Open Google Maps when marker is clicked
+                  window.open(
+                    `https://maps.google.com/?q=${point.converted.lat},${point.converted.lng}`,
+                    "_blank"
+                  );
+                })
+                .addTo(map);
+
+              // Store marker in array for later removal
+              waypointMarkers.push(marker);
+            }
+          });
+        }
       }
     } catch (fallbackError) {
       console.error("Fallback parsing also failed:", fallbackError);
@@ -549,9 +772,19 @@ fetch("./fk.json")
 
 // Initialize button states on page load
 document.addEventListener("DOMContentLoaded", function () {
+  // Clean up old GPX files that are no longer needed
+  cleanupOldGpxFiles();
+
   const savedGpx = loadGpxFromStorage();
   if (!savedGpx) {
     updateGpxButtonStates(false);
+  }
+
+  // Initialize compass display
+  const compassDisplay = document.getElementById("compass-direction");
+  if (compassDisplay) {
+    compassDisplay.textContent = "Nothing";
+    compassDisplay.style.display = "block";
   }
 });
 
@@ -843,7 +1076,18 @@ document.getElementById("centerMap").addEventListener("click", () => {
 // Clear GPX function
 function clearSavedGpx() {
   try {
-    localStorage.removeItem("savedGpx");
+    // Get the current GPX filename before clearing
+    const currentGpxFilename = localStorage.getItem("last_gpx");
+
+    // Remove the reference to the current GPX
+    localStorage.removeItem("last_gpx");
+
+    // Also remove the cached waypoints for this GPX file
+    if (currentGpxFilename) {
+      localStorage.removeItem(`gpx_${currentGpxFilename}_wp`);
+      console.log(`Cleared cached waypoints for ${currentGpxFilename}`);
+    }
+
     if (window.gpxLayer) {
       map.removeLayer(window.gpxLayer);
       window.gpxLayer = null;
@@ -879,11 +1123,27 @@ function showStatus(message, duration = 2000) {
 
 // Handle compass heading
 function handleOrientation(event) {
+  const compassDisplay = document.getElementById("compass-direction");
+
   if (event.absolute || event.webkitCompassHeading !== undefined) {
     heading = event.webkitCompassHeading || 360 - event.alpha;
+
+    // Update the arrow rotation
     const svg = document.querySelector(".arrow");
     if (svg) {
       svg.style.transform = `rotate(${heading}deg)`;
+    }
+
+    // Update the compass direction display
+    if (compassDisplay) {
+      compassDisplay.textContent = `${Math.round(heading)}°`;
+      compassDisplay.style.display = "block";
+    }
+  } else {
+    // No compass heading available
+    if (compassDisplay) {
+      compassDisplay.textContent = "Nothing";
+      compassDisplay.style.display = "block";
     }
   }
 }
