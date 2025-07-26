@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>GPX Button Test</title>
+  </head>
+  <body>
+    <h1>GPX Button Test</h1>
+
+    <div id="upload">
+      <input type="file" id="gpxFile" accept=".gpx" style="display: none" />
+      <button id="gpxButton">Load GPX</button>
+    </div>
+
+    <div
+      id="status"
+      style="display: none; background: yellow; padding: 10px; margin: 10px 0"
+    ></div>
+
+    <script>
+      // Simple test to verify button functionality
+      document.addEventListener("DOMContentLoaded", () => {
+        const gpxButton = document.getElementById("gpxButton");
+        const gpxFile = document.getElementById("gpxFile");
+        const status = document.getElementById("status");
+
+        console.log("gpxButton:", gpxButton);
+        console.log("gpxFile:", gpxFile);
+
+        if (gpxButton) {
+          gpxButton.addEventListener("click", () => {
+            console.log("Button clicked!");
+            status.textContent = "Button clicked successfully!";
+            status.style.display = "block";
+
+            if (gpxFile) {
+              gpxFile.click();
+            }
+          });
+        }
+
+        if (gpxFile) {
+          gpxFile.addEventListener("change", (e) => {
+            console.log("File selected:", e.target.files[0]);
+            status.textContent =
+              "File selected: " +
+              (e.target.files[0] ? e.target.files[0].name : "none");
+            status.style.display = "block";
+          });
+        }
+      });
+    </script>
+  </body>
+</html>

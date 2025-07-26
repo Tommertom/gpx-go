@@ -45,7 +45,7 @@
 
     <div id="upload">
       <input type="file" id="gpxFile" accept=".gpx" style="display: none" />
-      <button id="gpxButton" onclick="handleGpxButtonClick()">Load GPX</button>
+      <button id="gpxButton">Load GPX</button>
     </div>
 
     <div id="controls">
@@ -54,9 +54,7 @@
 
     <!-- Mobile bottom control panel -->
     <div id="bottom-controls">
-      <button id="gpxButtonMobile" onclick="handleGpxButtonClick()">
-        Load GPX
-      </button>
+      <button id="gpxButtonMobile">Load GPX</button>
       <button id="toggleFollowMobile">Follow</button>
       <button id="centerMap">Center</button>
     </div>
@@ -68,7 +66,7 @@
     <!-- GPX plugin -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet-gpx/1.5.1/gpx.min.js"></script>
 
-    <!-- Custom JavaScript -->
-    <script src="./script.js"></script>
+    <!-- Custom JavaScript - Modular -->
+    <script type="module" src="./app.js"></script>
   </body>
 </html>
