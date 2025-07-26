@@ -75,21 +75,33 @@ export class GPXApp {
     const gpxButton = document.getElementById("gpxButton");
     const gpxButtonMobile = document.getElementById("gpxButtonMobile");
 
+    const handleLoadGpx = () => {
+      // Check if there are stored GPX files
+      const storedGpxFiles = this.storage.getAllStoredGpxFiles();
+
+      if (storedGpxFiles.length === 0) {
+        // No stored files, show file upload dialog directly
+        document.getElementById("gpxFile").click();
+      } else {
+        // Show selection dialog with stored files
+        this.ui.showGpxSelectionDialog(
+          storedGpxFiles,
+          (filename) => this.loadStoredGpx(filename),
+          () => document.getElementById("gpxFile").click(),
+          (filename) => this.deleteGpxFile(filename)
+        );
+      }
+    };
+
     if (gpxButton) {
       gpxButton.addEventListener("click", () => {
-        this.ui.handleGpxButtonClick(
-          () => this.clearGpx(),
-          () => document.getElementById("gpxFile").click()
-        );
+        this.ui.handleGpxButtonClick(() => this.clearGpx(), handleLoadGpx);
       });
     }
 
     if (gpxButtonMobile) {
       gpxButtonMobile.addEventListener("click", () => {
-        this.ui.handleGpxButtonClick(
-          () => this.clearGpx(),
-          () => document.getElementById("gpxFile").click()
-        );
+        this.ui.handleGpxButtonClick(() => this.clearGpx(), handleLoadGpx);
       });
     }
   }
@@ -142,6 +154,50 @@ export class GPXApp {
       );
     } else {
       this.ui.updateGpxButtonStates(false);
+    }
+  }
+
+  loadStoredGpx(filename) {
+    const gpxData = this.storage.loadGpxByFilename(filename);
+    if (gpxData) {
+      console.log("Loading stored GPX:", filename);
+      this.ui.showStatus(`Loading ${filename}...`, 1000);
+
+      // Set this as the current GPX file
+      localStorage.setItem("last_gpx", filename);
+
+      this.ui.updateGpxButtonStates(true);
+      this.gpxProcessor.processGpxContent(
+        gpxData.content,
+        gpxData.filename,
+        this.jsonPointsData
+      );
+    } else {
+      this.ui.showStatus(`Error: Could not load ${filename}`, 3000);
+    }
+  }
+
+  deleteGpxFile(filename) {
+    try {
+      const success = this.storage.deleteGpxFile(filename);
+      if (success) {
+        this.ui.showStatus(`Deleted ${filename}`, 2000);
+
+        // If this was the currently loaded GPX file, clear the map
+        const currentGpxFilename = localStorage.getItem("last_gpx");
+        if (!currentGpxFilename || currentGpxFilename === filename) {
+          this.clearGpx();
+        }
+
+        return true;
+      } else {
+        this.ui.showStatus(`Error: Could not delete ${filename}`, 3000);
+        return false;
+      }
+    } catch (error) {
+      console.error("Error deleting GPX file:", error);
+      this.ui.showStatus(`Error: Could not delete ${filename}`, 3000);
+      return false;
     }
   }
 

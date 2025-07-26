@@ -292,11 +292,205 @@ export class GPXProcessor {
     return bounds;
   }
 
+  handleWaypointsWithJsonReplacement(waypoints, bounds, jsonPointsData) {
+    if (waypoints.length === 0) {
+      return bounds;
+    }
+
+    if (!jsonPointsData || jsonPointsData.length === 0) {
+      // No JSON data available, handle waypoints normally
+      return this.handleWaypoints(waypoints, bounds);
+    }
+
+    console.log(
+      `Displaying ${waypoints.length} GPX waypoints (fallback) with JSON replacement check`
+    );
+
+    // Convert JSON points to the same format as used in filtering
+    const processedJsonPoints = jsonPointsData
+      .map((jsonPoint) => {
+        if (
+          !jsonPoint.geom_point ||
+          !jsonPoint.geom_point[0] ||
+          !jsonPoint.geom_point[1]
+        ) {
+          return null;
+        }
+
+        // Convert coordinates to WGS84
+        const converted = this.pointFilter.converter.convertToWGS84(
+          jsonPoint.geom_point[0],
+          jsonPoint.geom_point[1]
+        );
+        if (!converted) {
+          return null;
+        }
+
+        return {
+          ...jsonPoint,
+          converted,
+        };
+      })
+      .filter((point) => point !== null);
+
+    const usedJsonPoints = new Set(); // Track which JSON points have been used
+    const maxDistance = 50; // Use same proximity distance as in CONFIG.PROXIMITY.MAX_DISTANCE
+
+    waypoints.forEach((waypoint, index) => {
+      let bestJsonPoint = null;
+      let bestDistance = Infinity;
+
+      // Find the closest JSON point to this waypoint
+      processedJsonPoints.forEach((jsonPoint, jsonIndex) => {
+        if (usedJsonPoints.has(jsonIndex)) {
+          return; // Skip already used JSON points
+        }
+
+        const distance = this.pointFilter.converter.calculateDistance(
+          waypoint.lat,
+          waypoint.lng,
+          jsonPoint.converted.lat,
+          jsonPoint.converted.lng
+        );
+
+        if (distance < maxDistance && distance < bestDistance) {
+          bestDistance = distance;
+          bestJsonPoint = { ...jsonPoint, originalIndex: jsonIndex };
+        }
+      });
+
+      let markerCoords;
+      if (bestJsonPoint) {
+        // Use JSON point coordinates instead of GPX waypoint coordinates
+        console.log(
+          `Replacing GPX waypoint ${
+            index + 1
+          } with JSON point (distance: ${bestDistance.toFixed(1)}m)`
+        );
+
+        const pointNumber = waypoint.name
+          ? waypoint.name.match(/\d+/)?.[0] || (index + 1).toString()
+          : (index + 1).toString();
+
+        const marker = this.markers.createPointMarker(
+          bestJsonPoint,
+          pointNumber
+        );
+        this.markers.addWaypointMarker(marker);
+
+        const markerCoords = [
+          bestJsonPoint.converted.lat,
+          bestJsonPoint.converted.lng,
+        ];
+
+        // Mark this JSON point as used
+        usedJsonPoints.add(bestJsonPoint.originalIndex);
+
+        // Calculate bounds if needed
+        if (!bounds) {
+          bounds = L.latLngBounds(markerCoords, markerCoords);
+        } else {
+          bounds.extend(markerCoords);
+        }
+      }
+    });
+
+    return bounds;
+  }
+
   displayWaypoints(waypoints) {
     console.log(`Displaying ${waypoints.length} GPX waypoints`);
     waypoints.forEach((waypoint, index) => {
       const marker = this.markers.createWaypointMarker(waypoint, index);
       this.markers.addWaypointMarker(marker);
+    });
+  }
+
+  displayWaypointsWithJsonReplacement(waypoints, jsonPointsData) {
+    console.log(
+      `Displaying ${waypoints.length} GPX waypoints with JSON replacement check`
+    );
+
+    if (!jsonPointsData || jsonPointsData.length === 0) {
+      // No JSON data available, display waypoints normally
+      this.displayWaypoints(waypoints);
+      return;
+    }
+
+    // Convert JSON points to the same format as used in filtering
+    const processedJsonPoints = jsonPointsData
+      .map((jsonPoint) => {
+        if (
+          !jsonPoint.geom_point ||
+          !jsonPoint.geom_point[0] ||
+          !jsonPoint.geom_point[1]
+        ) {
+          return null;
+        }
+
+        // Convert coordinates to WGS84
+        const converted = this.pointFilter.converter.convertToWGS84(
+          jsonPoint.geom_point[0],
+          jsonPoint.geom_point[1]
+        );
+        if (!converted) {
+          return null;
+        }
+
+        return {
+          ...jsonPoint,
+          converted,
+        };
+      })
+      .filter((point) => point !== null);
+
+    const usedJsonPoints = new Set(); // Track which JSON points have been used
+    const maxDistance = 50; // Use same proximity distance as in CONFIG.PROXIMITY.MAX_DISTANCE
+
+    waypoints.forEach((waypoint, index) => {
+      let bestJsonPoint = null;
+      let bestDistance = Infinity;
+
+      // Find the closest JSON point to this waypoint
+      processedJsonPoints.forEach((jsonPoint, jsonIndex) => {
+        if (usedJsonPoints.has(jsonIndex)) {
+          return; // Skip already used JSON points
+        }
+
+        const distance = this.pointFilter.converter.calculateDistance(
+          waypoint.lat,
+          waypoint.lng,
+          jsonPoint.converted.lat,
+          jsonPoint.converted.lng
+        );
+
+        if (distance < maxDistance && distance < bestDistance) {
+          bestDistance = distance;
+          bestJsonPoint = { ...jsonPoint, originalIndex: jsonIndex };
+        }
+      });
+
+      if (bestJsonPoint) {
+        // Use JSON point coordinates instead of GPX waypoint coordinates
+        console.log(
+          `Replacing GPX waypoint ${
+            index + 1
+          } with JSON point (distance: ${bestDistance.toFixed(1)}m)`
+        );
+
+        const pointNumber = waypoint.name
+          ? waypoint.name.match(/\d+/)?.[0] || (index + 1).toString()
+          : (index + 1).toString();
+
+        const marker = this.markers.createPointMarker(
+          bestJsonPoint,
+          pointNumber
+        );
+        this.markers.addWaypointMarker(marker);
+
+        // Mark this JSON point as used
+        usedJsonPoints.add(bestJsonPoint.originalIndex);
+      }
     });
   }
 
