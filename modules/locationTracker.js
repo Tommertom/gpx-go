@@ -88,15 +88,6 @@ export class LocationTracker {
     }
   }
 
-  centerOnLocation() {
-    if (this.userMarker) {
-      this.map.setView(this.userMarker.getLatLng(), this.map.getZoom());
-      this.ui.showStatus("Centered on your location");
-      return true;
-    }
-    return false;
-  }
-
   initCompass() {
     if (!window.DeviceOrientationEvent) {
       this.ui.showStatus("Compass not supported on this device", 3000);
@@ -185,10 +176,6 @@ export class LocationTracker {
     }
 
     this.ui.updateCompassDisplay(heading);
-  }
-
-  getFollowMode() {
-    return this.followMode;
   }
 
   getUserMarker() {

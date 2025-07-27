@@ -215,20 +215,17 @@ textarea {
 #compass-direction {
   position: absolute;
   top: 10px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.8);
-  color: white;
+  right: 10px;
+  background: transparent;
+  color: darkgray;
   padding: 8px 16px;
   border-radius: 6px;
   z-index: 1000;
-  font-size: 18px;
+  font-size: 36px;
   font-weight: bold;
   text-align: center;
   min-width: 60px;
   display: none;
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
 }
 
 @media (max-width: 768px) {
@@ -241,8 +238,8 @@ textarea {
   }
 
   #compass-direction {
-    top: 80px;
-    left: 10px;
+    top: 10px;
+    right: 10px;
     transform: none;
   }
 }
