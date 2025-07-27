@@ -32,7 +32,21 @@ export class UIController {
     const desktopButton = document.getElementById("gpxButton");
 
     if (desktopButton && desktopButton.textContent === "Load GPX") {
-      loadCallback();
+      // Disable button temporarily to prevent multiple clicks
+      desktopButton.disabled = true;
+      const originalText = desktopButton.textContent;
+      desktopButton.textContent = "Loading...";
+
+      // Re-enable button and restore text after operation completes
+      Promise.resolve(loadCallback()).finally(() => {
+        setTimeout(() => {
+          desktopButton.disabled = false;
+          // Only restore "Load GPX" text if it wasn't changed by the operation
+          if (desktopButton.textContent === "Loading...") {
+            desktopButton.textContent = originalText;
+          }
+        }, 500);
+      });
     } else if (desktopButton) {
       clearCallback();
     }

@@ -71,20 +71,40 @@ export class GPXApp {
     const gpxButtonMobile = document.getElementById("gpxButtonMobile");
 
     const handleLoadGpx = async () => {
-      // Check if there are stored GPX files
-      const storedGpxFiles = await this.storage.getAllStoredGpxFiles();
+      try {
+        // Show loading state
+        const loadingMessage = "Loading GPX files...";
+        this.ui.showStatus(loadingMessage, 1000);
 
-      if (storedGpxFiles.length === 0) {
-        // No stored files, show file upload dialog directly
-        document.getElementById("gpxFile").click();
-      } else {
-        // Show selection dialog with stored files
-        this.ui.showGpxSelectionDialog(
-          storedGpxFiles,
-          (filename) => this.loadStoredGpx(filename),
-          () => document.getElementById("gpxFile").click(),
-          (filename) => this.deleteGpxFile(filename)
-        );
+        // Check if there are stored GPX files
+        const storedGpxFiles = await this.storage.getAllStoredGpxFiles();
+
+        if (storedGpxFiles.length === 0) {
+          // No stored files, show file upload dialog directly
+          document.getElementById("gpxFile").click();
+        } else {
+          // Show selection dialog with stored files
+          this.ui.showGpxSelectionDialog(
+            storedGpxFiles,
+            (filename) => this.loadStoredGpx(filename),
+            () => document.getElementById("gpxFile").click(),
+            (filename) => this.deleteGpxFile(filename)
+          );
+        }
+      } catch (error) {
+        console.error("Error in handleLoadGpx:", error);
+        this.ui.showStatus("Error loading GPX files. Please try again.", 3000);
+
+        // Fallback: try to open file dialog directly
+        try {
+          document.getElementById("gpxFile").click();
+        } catch (fallbackError) {
+          console.error("Fallback file dialog also failed:", fallbackError);
+          this.ui.showStatus(
+            "Error: Cannot open file dialog. Please refresh the page.",
+            5000
+          );
+        }
       }
     };
 
@@ -96,20 +116,58 @@ export class GPXApp {
 
     if (gpxButtonMobile) {
       gpxButtonMobile.addEventListener("click", () => {
-        this.ui.handleGpxButtonClick(() => this.clearGpx(), handleLoadGpx);
+        // Apply same protection to mobile button
+        if (gpxButtonMobile.textContent === "Load GPX") {
+          gpxButtonMobile.disabled = true;
+          const originalText = gpxButtonMobile.textContent;
+          gpxButtonMobile.textContent = "Loading...";
+
+          Promise.resolve(handleLoadGpx()).finally(() => {
+            setTimeout(() => {
+              gpxButtonMobile.disabled = false;
+              if (gpxButtonMobile.textContent === "Loading...") {
+                gpxButtonMobile.textContent = originalText;
+              }
+            }, 500);
+          });
+        } else {
+          this.clearGpx();
+        }
       });
     }
   }
 
   async initializeApp() {
-    // Check for saved GPX
-    const savedGpx = await this.storage.loadGpx();
-    if (!savedGpx) {
-      this.ui.updateGpxButtonStates(false);
-    }
+    try {
+      // Ensure storage is initialized before proceeding
+      const storageReady = await this.storage.ensureInitialized();
+      if (!storageReady) {
+        console.warn(
+          "Storage initialization failed, some features may not work properly"
+        );
+        this.ui.showStatus(
+          "Warning: Storage not available. Some features may not work.",
+          5000
+        );
+      }
 
-    // Initialize compass display
-    this.ui.initCompassDisplay();
+      // Check for saved GPX
+      const savedGpx = await this.storage.loadGpx();
+      if (!savedGpx) {
+        this.ui.updateGpxButtonStates(false);
+      }
+
+      // Initialize compass display
+      this.ui.initCompassDisplay();
+
+      console.log("App initialization complete");
+    } catch (error) {
+      console.error("Error during app initialization:", error);
+      this.ui.showStatus(
+        "App initialization error. Some features may not work.",
+        5000
+      );
+    }
   }
 
   async loadInitialData() {
@@ -135,17 +193,23 @@ export class GPXApp {
   }
 
   async loadSavedGpx() {
-    const savedGpx = await this.storage.loadGpx();
-    if (savedGpx) {
-      console.log("Loading saved GPX from IndexedDB:", savedGpx.filename);
-      this.ui.updateGpxButtonStates(true);
-      this.gpxProcessor.processGpxContent(
-        savedGpx.content,
-        savedGpx.filename,
-        this.jsonPointsData
-      );
-    } else {
+    try {
+      const savedGpx = await this.storage.loadGpx();
+      if (savedGpx) {
+        console.log("Loading saved GPX from IndexedDB:", savedGpx.filename);
+        this.ui.updateGpxButtonStates(true);
+        this.gpxProcessor.processGpxContent(
+          savedGpx.content,
+          savedGpx.filename,
+          this.jsonPointsData
+        );
+      } else {
+        this.ui.updateGpxButtonStates(false);
+      }
+    } catch (error) {
+      console.error("Error loading saved GPX:", error);
       this.ui.updateGpxButtonStates(false);
+      this.ui.showStatus("Error loading saved GPX file", 3000);
     }
   }
 
