@@ -102,9 +102,6 @@ export class GPXApp {
   }
 
   initializeApp() {
-    // Clean up old GPX files
-    this.storage.cleanup();
-
     // Check for saved GPX
     const savedGpx = this.storage.loadGpx();
     if (!savedGpx) {
@@ -159,7 +156,7 @@ export class GPXApp {
       this.ui.showStatus(`Loading ${filename}...`, 2000);
 
       // Set this as the current GPX file
-      localStorage.setItem("last_gpx", filename);
+      localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_GPX, filename);
 
       this.ui.updateGpxButtonStates(true);
 
@@ -183,7 +180,9 @@ export class GPXApp {
         this.ui.showStatus(`Deleted ${filename}`, 2000);
 
         // If this was the currently loaded GPX file, clear the map
-        const currentGpxFilename = localStorage.getItem("last_gpx");
+        const currentGpxFilename = localStorage.getItem(
+          CONFIG.STORAGE_KEYS.LAST_GPX
+        );
         if (!currentGpxFilename || currentGpxFilename === filename) {
           this.clearGpx();
         }
