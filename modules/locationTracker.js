@@ -12,6 +12,8 @@ export class LocationTracker {
     this.initialLocationSet = false;
     this.compassInitialized = false;
     this.compassPermissionRequested = false;
+    this.lastPosition = null;
+    this.lastTimestamp = null;
     // Don't initialize compass here - wait for user action
   }
 
@@ -28,6 +30,41 @@ export class LocationTracker {
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const latlng = [pos.coords.latitude, pos.coords.longitude];
+        const currentTimestamp = Date.now();
+
+        // Calculate speed if we have a previous position
+        let speedKmh = 0;
+        if (this.lastPosition && this.lastTimestamp && this.followMode) {
+          // Use GPS speed if available and reliable
+          if (
+            pos.coords.speed !== null &&
+            pos.coords.speed !== undefined &&
+            pos.coords.speed >= 0
+          ) {
+            speedKmh = pos.coords.speed * 3.6; // Convert m/s to km/h
+          } else {
+            // Calculate speed from position change
+            const deltaTime = (currentTimestamp - this.lastTimestamp) / 1000; // seconds
+            if (deltaTime > 0) {
+              const distance = this.calculateDistance(
+                this.lastPosition[0],
+                this.lastPosition[1],
+                latlng[0],
+                latlng[1]
+              );
+              speedKmh = (distance / deltaTime) * 3.6; // Convert m/s to km/h
+            }
+          }
+        }
+
+        // Update speed display if in follow mode
+        if (this.followMode) {
+          this.ui.updateSpeedDisplay(speedKmh);
+        }
+
+        // Store current position and timestamp for next calculation
+        this.lastPosition = latlng;
+        this.lastTimestamp = currentTimestamp;
 
         if (!this.userMarker) {
           this.userMarker = L.marker(latlng, {
@@ -67,7 +104,7 @@ export class LocationTracker {
 
     // Show status
     this.ui.showStatus(
-      this.followMode ? "Follow mode enabled" : "Follow mode disabled"
+      this.followMode ? "Follow Me mode enabled" : "Follow Me mode disabled"
     );
 
     if (this.followMode) {
@@ -77,6 +114,10 @@ export class LocationTracker {
         this.compassInitialized = true;
       }
 
+      // Reset speed tracking
+      this.lastPosition = null;
+      this.lastTimestamp = null;
+
       // Start watching position when follow mode is enabled
       this.startWatching();
       if (this.userMarker) {
@@ -85,6 +126,9 @@ export class LocationTracker {
     } else {
       // Stop watching position when follow mode is disabled
       this.stopWatching();
+      // Reset speed tracking
+      this.lastPosition = null;
+      this.lastTimestamp = null;
     }
   }
 
@@ -180,6 +224,21 @@ export class LocationTracker {
 
   getUserMarker() {
     return this.userMarker;
+  }
+
+  // Calculate distance between two coordinates using Haversine formula
+  calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in meters
   }
 
   // Debug method to manually request compass permission

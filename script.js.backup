@@ -1032,12 +1032,12 @@ function stopWatchingPosition() {
 // Follow mode toggle (for both desktop and mobile)
 function toggleFollowMode() {
   followMode = !followMode;
-  const followText = followMode ? "Unfollow" : "Follow";
+  const followText = followMode ? "Unfollow Me" : "Follow Me";
   document.getElementById("toggleFollow").textContent = followText;
   document.getElementById("toggleFollowMobile").textContent = followText;
 
   // Show status
-  showStatus(followMode ? "Follow mode enabled" : "Follow mode disabled");
+  showStatus(followMode ? "Follow Me mode enabled" : "Follow Me mode disabled");
 
   if (followMode) {
     // Start watching position when follow mode is enabled

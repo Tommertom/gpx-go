@@ -156,17 +156,21 @@ export class GPXApp {
     const gpxData = this.storage.loadGpxByFilename(filename);
     if (gpxData) {
       console.log("Loading stored GPX:", filename);
-      this.ui.showStatus(`Loading ${filename}...`, 1000);
+      this.ui.showStatus(`Loading ${filename}...`, 2000);
 
       // Set this as the current GPX file
       localStorage.setItem("last_gpx", filename);
 
       this.ui.updateGpxButtonStates(true);
-      this.gpxProcessor.processGpxContent(
-        gpxData.content,
-        gpxData.filename,
-        this.jsonPointsData
-      );
+
+      // Add a small delay to ensure the loading message is visible
+      setTimeout(() => {
+        this.gpxProcessor.processGpxContent(
+          gpxData.content,
+          gpxData.filename,
+          this.jsonPointsData
+        );
+      }, 100);
     } else {
       this.ui.showStatus(`Error: Could not load ${filename}`, 3000);
     }
