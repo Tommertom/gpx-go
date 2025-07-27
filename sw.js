@@ -1,5 +1,5 @@
 // Service Worker for GPX Go!
-const CACHE_NAME = "gpx-go-v4";
+const CACHE_NAME = "gpx-go-v5";
 const urlsToCache = [
   "./",
   "./index.html",

@@ -92,7 +92,7 @@ export class UIController {
 
       const deleteButton = document.createElement("button");
       deleteButton.className = "gpx-delete-btn";
-      deleteButton.innerHTML = "🗑️";
+      deleteButton.innerHTML = "🗑";
       deleteButton.title = `Delete ${gpxFile.displayName}`;
 
       fileItem.addEventListener("mouseenter", () => {

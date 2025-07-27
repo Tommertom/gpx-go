@@ -104,8 +104,7 @@ button {
 
 /* Delete button specific styles */
 .gpx-delete-btn {
-  background: #dc3545 !important;
-  color: white !important;
+  color: red !important;
   border: none !important;
   border-radius: 4px !important;
   width: 32px !important;
@@ -115,15 +114,13 @@ button {
   align-items: center !important;
   justify-content: center !important;
   margin-left: 8px !important;
-  font-size: 14px !important;
+  font-size: 24px !important;
+  font-weight: bold !important  ;
   transition: background-color 0.2s !important;
   min-height: unset !important;
   min-width: unset !important;
   padding: 0 !important;
-}
-
-.gpx-delete-btn:hover {
-  background: #c82333 !important;
+  background: transparent !important;
 }
 
 /* GPX file name overflow handling */
