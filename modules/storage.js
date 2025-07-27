@@ -57,12 +57,11 @@ export class StorageManager {
       // Find all GPX keys in localStorage
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith(CONFIG.STORAGE_KEYS.GPX_PREFIX)) {
-          // Skip waypoint files
-          if (key.endsWith(CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX)) {
-            continue;
-          }
-
+        if (
+          key &&
+          key.startsWith(CONFIG.STORAGE_KEYS.GPX_PREFIX) &&
+          key.endsWith(".gpx")
+        ) {
           const filename = key.substring(CONFIG.STORAGE_KEYS.GPX_PREFIX.length);
           const savedData = localStorage.getItem(key);
 
@@ -215,48 +214,6 @@ export class StorageManager {
     } catch (error) {
       console.error("Error clearing GPX from localStorage:", error);
       throw error;
-    }
-  }
-
-  cleanup() {
-    try {
-      const lastGpxFilename = localStorage.getItem(
-        CONFIG.STORAGE_KEYS.LAST_GPX
-      );
-      const keysToRemove = [];
-
-      // Find only waypoint keys in localStorage (not actual GPX files)
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (
-          key &&
-          key.startsWith(CONFIG.STORAGE_KEYS.GPX_PREFIX) &&
-          key.endsWith(CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX)
-        ) {
-          // Extract filename from waypoint key
-          const filename = key.substring(
-            CONFIG.STORAGE_KEYS.GPX_PREFIX.length,
-            key.length - CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX.length
-          );
-
-          // If this isn't the current GPX file, mark waypoints for removal
-          if (filename !== lastGpxFilename) {
-            keysToRemove.push(key);
-          }
-        }
-      }
-
-      // Remove old waypoints only (keep GPX files)
-      keysToRemove.forEach((key) => {
-        localStorage.removeItem(key);
-        console.log(`Cleaned up old waypoints: ${key}`);
-      });
-
-      if (keysToRemove.length > 0) {
-        console.log(`Cleaned up ${keysToRemove.length} old waypoint files`);
-      }
-    } catch (error) {
-      console.error("Error cleaning up old waypoints:", error);
     }
   }
 }
