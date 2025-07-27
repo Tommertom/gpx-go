@@ -103,6 +103,9 @@ export class LocationTracker {
       return;
     }
 
+    // Reset compass rotation state when initializing
+    this.ui.resetCompassRotation();
+
     if (typeof DeviceOrientationEvent.requestPermission === "function") {
       // iOS 13+ requires user gesture to request permission
       if (!this.compassPermissionRequested) {

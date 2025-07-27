@@ -1,6 +1,8 @@
 export class UIController {
   constructor() {
     this.initEventListeners();
+    this.previousHeading = null;
+    this.accumulatedRotation = 0;
   }
 
   updateGpxButtonStates(gpxLoaded) {
@@ -211,16 +213,46 @@ export class UIController {
       compassDisplay.textContent = "Nothing";
       compassDisplay.style.display = "block";
     }
+
+    // Reset compass rotation state
+    this.resetCompassRotation();
+  }
+
+  resetCompassRotation() {
+    this.previousHeading = null;
+    this.accumulatedRotation = 0;
   }
 
   updateCompassDisplay(heading) {
     const compassDisplay = document.getElementById("compass-direction");
 
     if (heading !== null) {
-      // Update the arrow rotation
+      // Update the arrow rotation with smooth boundary handling
       const svg = document.querySelector(".arrow");
       if (svg) {
-        svg.style.transform = `rotate(${heading}deg)`;
+        if (this.previousHeading !== null) {
+          // Calculate the shortest rotation path
+          let delta = heading - this.previousHeading;
+
+          // Handle 360°/0° boundary crossings
+          if (delta > 180) {
+            delta -= 360; // Going from ~1° to ~359° should be negative rotation
+          } else if (delta < -180) {
+            delta += 360; // Going from ~359° to ~1° should be positive rotation
+          }
+
+          // Update accumulated rotation
+          this.accumulatedRotation += delta;
+        } else {
+          // First heading value, just set it directly
+          this.accumulatedRotation = heading;
+        }
+
+        // Apply the rotation using accumulated value
+        svg.style.transform = `rotate(${this.accumulatedRotation}deg)`;
+
+        // Store the current heading for next calculation
+        this.previousHeading = heading;
       }
 
       // Update the compass direction display
