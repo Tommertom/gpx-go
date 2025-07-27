@@ -206,6 +206,9 @@ export class UIController {
         }
       });
     }
+
+    // Initialize double-tap zoom prevention
+    this.initDoubleTapPrevention();
   }
 
   initCompassDisplay() {
@@ -400,5 +403,99 @@ export class UIController {
   isDebugMode() {
     const debugDiv = document.getElementById("debug-info");
     return debugDiv && debugDiv.style.display === "block";
+  }
+
+  initDoubleTapPrevention() {
+    let lastTouchEnd = 0;
+    let touchStartTime = 0;
+    let touchCount = 0;
+
+    // Prevent double-tap zoom on the entire document
+    document.addEventListener(
+      "touchstart",
+      (e) => {
+        touchStartTime = Date.now();
+        touchCount++;
+
+        // Reset touch count after a delay
+        setTimeout(() => {
+          touchCount = 0;
+        }, 300);
+      },
+      { passive: true }
+    );
+
+    document.addEventListener(
+      "touchend",
+      (e) => {
+        const now = Date.now();
+        const touchDuration = now - touchStartTime;
+
+        // If this is a quick tap (< 300ms) and we've had multiple taps
+        if (touchDuration < 300 && touchCount > 1) {
+          // Check if this is within the double-tap time window
+          if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }
+
+        lastTouchEnd = now;
+      },
+      { passive: false }
+    );
+
+    // Additional prevention for specific iOS Safari issues
+    document.addEventListener(
+      "gesturestart",
+      (e) => {
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+
+    document.addEventListener(
+      "gesturechange",
+      (e) => {
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+
+    document.addEventListener(
+      "gestureend",
+      (e) => {
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+
+    // Prevent zoom via meta viewport manipulation
+    this.preventViewportZoom();
+  }
+
+  preventViewportZoom() {
+    // Dynamically ensure viewport settings are maintained
+    let viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute(
+        "content",
+        "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      );
+    }
+
+    // Handle orientation changes to maintain zoom prevention
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => {
+        viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+          viewport.setAttribute(
+            "content",
+            "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+          );
+        }
+      }, 100);
+    });
   }
 }

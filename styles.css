@@ -5,12 +5,23 @@ body {
   -moz-user-select: none;
   -ms-user-select: none;
   user-select: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
+}
+
+html {
+  touch-action: manipulation;
+  -webkit-text-size-adjust: 100%;
+  -ms-text-size-adjust: 100%;
 }
 
 #map {
   height: 100vh;
   width: 100%;
   -webkit-touch-callout: none;
+  touch-action: manipulation;
 }
 
 /* Mobile-first design */
@@ -23,6 +34,8 @@ body {
   padding: 8px 12px;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 
 #controls {
@@ -34,6 +47,8 @@ body {
   padding: 8px 12px;
   border-radius: 8px;
   box-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 
 button {
@@ -53,16 +68,23 @@ button {
 /* GPX Selection Dialog Styles */
 #gpxSelectionDialog {
   font-family: sans-serif;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 
 #gpxSelectionDialog h3 {
   color: #333;
   font-size: 1.2em;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 .gpx-file-item {
   transition: all 0.2s ease;
   border: 1px solid #ddd !important;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 
 .gpx-file-item:hover {
@@ -72,6 +94,7 @@ button {
 
 .gpx-select-file-item {
   transition: all 0.2s ease;
+  touch-action: manipulation;
 }
 
 .gpx-select-file-item:hover {
@@ -138,11 +161,14 @@ button:active {
   justify-content: space-around;
   backdrop-filter: blur(10px);
   -webkit-backdrop-filter: blur(10px);
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
 
 #bottom-controls button {
   flex: 1;
   max-width: 150px;
+  touch-action: manipulation;
 }
 
 .arrow {
@@ -193,6 +219,31 @@ button,
 select,
 textarea {
   font-size: 16px;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+}
+
+/* Global touch action rules to prevent double-tap zoom */
+* {
+  -webkit-tap-highlight-color: transparent;
+}
+
+a,
+button,
+[role="button"],
+[tabindex],
+input,
+select,
+textarea {
+  touch-action: manipulation;
+}
+
+/* Specific elements that should prevent double-tap zoom */
+.leaflet-container,
+.leaflet-control,
+.leaflet-popup,
+.leaflet-marker-icon {
+  touch-action: manipulation !important;
 }
 
 /* Status indicator */
@@ -226,6 +277,10 @@ textarea {
   text-align: center;
   min-width: 60px;
   display: none;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 /* Speed display */
@@ -244,6 +299,10 @@ textarea {
   min-width: 60px;
   display: none;
   cursor: pointer;
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
 }
 
 @media (max-width: 768px) {
@@ -266,4 +325,19 @@ textarea {
     right: 10px;
     transform: none;
   }
+}
+
+/* Debug info and modal overlays */
+#debug-info {
+  touch-action: manipulation !important;
+  -webkit-touch-callout: none !important;
+  -webkit-user-select: none !important;
+  user-select: none !important;
+}
+
+/* Additional safety rules for preventing zoom */
+div[style*="position: fixed"],
+div[style*="position: absolute"] {
+  touch-action: manipulation;
+  -webkit-touch-callout: none;
 }
