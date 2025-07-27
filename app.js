@@ -70,9 +70,9 @@ export class GPXApp {
     const gpxButton = document.getElementById("gpxButton");
     const gpxButtonMobile = document.getElementById("gpxButtonMobile");
 
-    const handleLoadGpx = () => {
+    const handleLoadGpx = async () => {
       // Check if there are stored GPX files
-      const storedGpxFiles = this.storage.getAllStoredGpxFiles();
+      const storedGpxFiles = await this.storage.getAllStoredGpxFiles();
 
       if (storedGpxFiles.length === 0) {
         // No stored files, show file upload dialog directly
@@ -101,9 +101,9 @@ export class GPXApp {
     }
   }
 
-  initializeApp() {
+  async initializeApp() {
     // Check for saved GPX
-    const savedGpx = this.storage.loadGpx();
+    const savedGpx = await this.storage.loadGpx();
     if (!savedGpx) {
       this.ui.updateGpxButtonStates(false);
     }
@@ -134,10 +134,10 @@ export class GPXApp {
     }
   }
 
-  loadSavedGpx() {
-    const savedGpx = this.storage.loadGpx();
+  async loadSavedGpx() {
+    const savedGpx = await this.storage.loadGpx();
     if (savedGpx) {
-      console.log("Loading saved GPX from localStorage:", savedGpx.filename);
+      console.log("Loading saved GPX from IndexedDB:", savedGpx.filename);
       this.ui.updateGpxButtonStates(true);
       this.gpxProcessor.processGpxContent(
         savedGpx.content,
@@ -149,14 +149,14 @@ export class GPXApp {
     }
   }
 
-  loadStoredGpx(filename) {
-    const gpxData = this.storage.loadGpxByFilename(filename);
+  async loadStoredGpx(filename) {
+    const gpxData = await this.storage.loadGpxByFilename(filename);
     if (gpxData) {
       console.log("Loading stored GPX:", filename);
       this.ui.showStatus(`Loading ${filename}...`, 2000);
 
-      // Set this as the current GPX file
-      localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_GPX, filename);
+      // Set this as the current GPX file using storage
+      await this.storage.saveGpx(gpxData.content, filename);
 
       this.ui.updateGpxButtonStates(true);
 
@@ -173,18 +173,16 @@ export class GPXApp {
     }
   }
 
-  deleteGpxFile(filename) {
+  async deleteGpxFile(filename) {
     try {
-      const success = this.storage.deleteGpxFile(filename);
+      const success = await this.storage.deleteGpxFile(filename);
       if (success) {
         this.ui.showStatus(`Deleted ${filename}`, 2000);
 
         // If this was the currently loaded GPX file, clear the map
-        const currentGpxFilename = localStorage.getItem(
-          CONFIG.STORAGE_KEYS.LAST_GPX
-        );
+        const currentGpxFilename = await this.storage.getCurrentGpxFilename();
         if (!currentGpxFilename || currentGpxFilename === filename) {
-          this.clearGpx();
+          await this.clearGpx();
         }
 
         return true;
@@ -206,11 +204,11 @@ export class GPXApp {
     this.ui.showStatus("Loading GPX file...", 1000);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const gpxText = event.target.result;
 
-      // Save to localStorage
-      this.storage.saveGpx(gpxText, file.name);
+      // Save to IndexedDB
+      await this.storage.saveGpx(gpxText, file.name);
 
       // Process the GPX content
       this.gpxProcessor.processGpxContent(
@@ -222,9 +220,9 @@ export class GPXApp {
     reader.readAsText(file);
   }
 
-  clearGpx() {
+  async clearGpx() {
     try {
-      this.storage.clearGpx();
+      await this.storage.clearGpx();
 
       if (window.gpxLayer) {
         this.map.removeLayer(window.gpxLayer);

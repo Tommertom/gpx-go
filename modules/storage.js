@@ -1,7 +1,20 @@
 import { CONFIG } from "./config.js";
 
 export class StorageManager {
-  saveGpx(gpxContent, filename) {
+  constructor() {
+    // Configure localForage to use IndexedDB
+    if (typeof localforage !== "undefined") {
+      localforage.config({
+        driver: localforage.INDEXEDDB,
+        name: "GPXApp",
+        version: 1.0,
+        storeName: "gpx_data",
+        description: "GPX files and waypoints storage",
+      });
+    }
+  }
+
+  async saveGpx(gpxContent, filename) {
     try {
       const gpxData = {
         content: gpxContent,
@@ -10,26 +23,26 @@ export class StorageManager {
       };
 
       // Store the GPX content using filename as key
-      localStorage.setItem(
+      await localforage.setItem(
         `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}`,
-        JSON.stringify(gpxData)
+        gpxData
       );
 
       // Store the current filename reference
-      localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_GPX, filename);
+      await localforage.setItem(CONFIG.STORAGE_KEYS.LAST_GPX, filename);
 
       console.log(
-        `GPX saved to localStorage with key: ${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}`
+        `GPX saved to IndexedDB with key: ${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}`
       );
     } catch (error) {
-      console.error("Error saving GPX to localStorage:", error);
+      console.error("Error saving GPX to IndexedDB:", error);
     }
   }
 
-  loadGpx() {
+  async loadGpx() {
     try {
       // Get the last GPX filename
-      const lastGpxFilename = localStorage.getItem(
+      const lastGpxFilename = await localforage.getItem(
         CONFIG.STORAGE_KEYS.LAST_GPX
       );
       if (!lastGpxFilename) {
@@ -37,65 +50,74 @@ export class StorageManager {
       }
 
       // Get the GPX data using the filename
-      const savedData = localStorage.getItem(
+      const gpxData = await localforage.getItem(
         `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${lastGpxFilename}`
       );
-      if (savedData) {
-        const gpxData = JSON.parse(savedData);
+      if (gpxData) {
         return gpxData;
       }
     } catch (error) {
-      console.error("Error loading GPX from localStorage:", error);
+      console.error("Error loading GPX from IndexedDB:", error);
     }
     return null;
   }
 
-  getAllStoredGpxFiles() {
+  async getCurrentGpxFilename() {
+    try {
+      return await localforage.getItem(CONFIG.STORAGE_KEYS.LAST_GPX);
+    } catch (error) {
+      console.error("Error getting current GPX filename:", error);
+      return null;
+    }
+  }
+
+  async getAllStoredGpxFiles() {
     try {
       const gpxFiles = [];
 
-      // Find all GPX keys in localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (
+      // Get all keys from localforage
+      const keys = await localforage.keys();
+
+      // Filter for GPX keys
+      const gpxKeys = keys.filter(
+        (key) =>
           key &&
           key.startsWith(CONFIG.STORAGE_KEYS.GPX_PREFIX) &&
           key.endsWith(".gpx")
-        ) {
-          const filename = key.substring(CONFIG.STORAGE_KEYS.GPX_PREFIX.length);
-          const savedData = localStorage.getItem(key);
+      );
 
-          if (savedData) {
-            try {
-              const gpxData = JSON.parse(savedData);
+      for (const key of gpxKeys) {
+        const filename = key.substring(CONFIG.STORAGE_KEYS.GPX_PREFIX.length);
+        const gpxData = await localforage.getItem(key);
 
-              // Create clean display name: remove .gpx extension, numbers, and non-alphabet characters
-              let cleanName = filename.replace(".gpx", "");
-              // Remove numbers and non-alphabet characters, keep spaces and hyphens for readability
-              cleanName = cleanName.replace(/[^a-zA-Z\s-]/g, "");
-              // Replace multiple spaces/hyphens with single space and trim
-              cleanName = cleanName.replace(/[\s-]+/g, " ").trim();
-              // If the cleaned name is empty, use "GPX File" as fallback
-              if (!cleanName) {
-                cleanName = "GPX File";
-              }
-              // Capitalize the first character
-              if (cleanName.length > 0) {
-                cleanName =
-                  cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
-              }
-
-              gpxFiles.push({
-                filename: filename,
-                timestamp: gpxData.timestamp || 0,
-                displayName: cleanName,
-              });
-            } catch (parseError) {
-              console.warn(
-                `Failed to parse GPX data for ${filename}:`,
-                parseError
-              );
+        if (gpxData) {
+          try {
+            // Create clean display name: remove .gpx extension, numbers, and non-alphabet characters
+            let cleanName = filename.replace(".gpx", "");
+            // Remove numbers and non-alphabet characters, keep spaces and hyphens for readability
+            cleanName = cleanName.replace(/[^a-zA-Z\s-]/g, "");
+            // Replace multiple spaces/hyphens with single space and trim
+            cleanName = cleanName.replace(/[\s-]+/g, " ").trim();
+            // If the cleaned name is empty, use "GPX File" as fallback
+            if (!cleanName) {
+              cleanName = "GPX File";
             }
+            // Capitalize the first character
+            if (cleanName.length > 0) {
+              cleanName =
+                cleanName.charAt(0).toUpperCase() + cleanName.slice(1);
+            }
+
+            gpxFiles.push({
+              filename: filename,
+              timestamp: gpxData.timestamp || 0,
+              displayName: cleanName,
+            });
+          } catch (parseError) {
+            console.warn(
+              `Failed to parse GPX data for ${filename}:`,
+              parseError
+            );
           }
         }
       }
@@ -110,13 +132,12 @@ export class StorageManager {
     }
   }
 
-  loadGpxByFilename(filename) {
+  async loadGpxByFilename(filename) {
     try {
-      const savedData = localStorage.getItem(
+      const gpxData = await localforage.getItem(
         `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}`
       );
-      if (savedData) {
-        const gpxData = JSON.parse(savedData);
+      if (gpxData) {
         return gpxData;
       }
     } catch (error) {
@@ -125,22 +146,22 @@ export class StorageManager {
     return null;
   }
 
-  deleteGpxFile(filename) {
+  async deleteGpxFile(filename) {
     try {
       // Remove the GPX file
       const gpxKey = `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}`;
-      localStorage.removeItem(gpxKey);
+      await localforage.removeItem(gpxKey);
 
       // Remove associated waypoints
       const waypointKey = `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}${CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX}`;
-      localStorage.removeItem(waypointKey);
+      await localforage.removeItem(waypointKey);
 
       // If this was the current GPX file, clear the reference
-      const currentGpxFilename = localStorage.getItem(
+      const currentGpxFilename = await localforage.getItem(
         CONFIG.STORAGE_KEYS.LAST_GPX
       );
       if (currentGpxFilename === filename) {
-        localStorage.removeItem(CONFIG.STORAGE_KEYS.LAST_GPX);
+        await localforage.removeItem(CONFIG.STORAGE_KEYS.LAST_GPX);
       }
 
       console.log(`Deleted GPX file: ${filename}`);
@@ -151,7 +172,7 @@ export class StorageManager {
     }
   }
 
-  saveWaypoints(waypoints, filename) {
+  async saveWaypoints(waypoints, filename) {
     try {
       const waypointData = {
         waypoints: waypoints,
@@ -159,49 +180,48 @@ export class StorageManager {
         timestamp: Date.now(),
       };
 
-      localStorage.setItem(
+      await localforage.setItem(
         `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}${CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX}`,
-        JSON.stringify(waypointData)
+        waypointData
       );
       console.log(
-        `Waypoints saved to localStorage with key: ${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}${CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX}`
+        `Waypoints saved to IndexedDB with key: ${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}${CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX}`
       );
     } catch (error) {
-      console.error("Error saving waypoints to localStorage:", error);
+      console.error("Error saving waypoints to IndexedDB:", error);
     }
   }
 
-  loadWaypoints(filename) {
+  async loadWaypoints(filename) {
     try {
-      const savedData = localStorage.getItem(
+      const waypointData = await localforage.getItem(
         `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${filename}${CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX}`
       );
-      if (savedData) {
-        const waypointData = JSON.parse(savedData);
+      if (waypointData) {
         console.log(
-          `Loaded ${waypointData.waypoints.length} waypoints from localStorage for ${filename}`
+          `Loaded ${waypointData.waypoints.length} waypoints from IndexedDB for ${filename}`
         );
         return waypointData.waypoints;
       }
     } catch (error) {
-      console.error("Error loading waypoints from localStorage:", error);
+      console.error("Error loading waypoints from IndexedDB:", error);
     }
     return null;
   }
 
-  clearGpx() {
+  async clearGpx() {
     try {
       // Get the current GPX filename before clearing
-      const currentGpxFilename = localStorage.getItem(
+      const currentGpxFilename = await localforage.getItem(
         CONFIG.STORAGE_KEYS.LAST_GPX
       );
 
       // Remove the reference to the current GPX
-      localStorage.removeItem(CONFIG.STORAGE_KEYS.LAST_GPX);
+      await localforage.removeItem(CONFIG.STORAGE_KEYS.LAST_GPX);
 
       // Also remove the cached waypoints for this GPX file
       if (currentGpxFilename) {
-        localStorage.removeItem(
+        await localforage.removeItem(
           `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${currentGpxFilename}${CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX}`
         );
         console.log(
@@ -212,7 +232,7 @@ export class StorageManager {
 
       return currentGpxFilename;
     } catch (error) {
-      console.error("Error clearing GPX from localStorage:", error);
+      console.error("Error clearing GPX from IndexedDB:", error);
       throw error;
     }
   }
