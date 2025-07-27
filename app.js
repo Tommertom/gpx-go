@@ -51,24 +51,19 @@ export class GPXApp {
     });
 
     // Follow mode buttons
-    document.getElementById("toggleFollow").addEventListener("click", () => {
-      this.locationTracker.toggleFollowMode();
-    });
-    document
-      .getElementById("toggleFollowMobile")
-      .addEventListener("click", () => {
+    const toggleFollow = document.getElementById("toggleFollow");
+    if (toggleFollow) {
+      toggleFollow.addEventListener("click", () => {
         this.locationTracker.toggleFollowMode();
       });
+    }
 
-    // Center map button
-    document.getElementById("centerMap").addEventListener("click", () => {
-      this.handleCenterMap();
-    });
-
-    // Compass debug button
-    document.getElementById("compassDebug").addEventListener("click", () => {
-      this.handleCompassDebug();
-    });
+    const toggleFollowMobile = document.getElementById("toggleFollowMobile");
+    if (toggleFollowMobile) {
+      toggleFollowMobile.addEventListener("click", () => {
+        this.locationTracker.toggleFollowMode();
+      });
+    }
   }
 
   setupGpxButtons() {
@@ -161,17 +156,21 @@ export class GPXApp {
     const gpxData = this.storage.loadGpxByFilename(filename);
     if (gpxData) {
       console.log("Loading stored GPX:", filename);
-      this.ui.showStatus(`Loading ${filename}...`, 1000);
+      this.ui.showStatus(`Loading ${filename}...`, 2000);
 
       // Set this as the current GPX file
       localStorage.setItem("last_gpx", filename);
 
       this.ui.updateGpxButtonStates(true);
-      this.gpxProcessor.processGpxContent(
-        gpxData.content,
-        gpxData.filename,
-        this.jsonPointsData
-      );
+
+      // Add a small delay to ensure the loading message is visible
+      setTimeout(() => {
+        this.gpxProcessor.processGpxContent(
+          gpxData.content,
+          gpxData.filename,
+          this.jsonPointsData
+        );
+      }, 100);
     } else {
       this.ui.showStatus(`Error: Could not load ${filename}`, 3000);
     }
@@ -246,64 +245,6 @@ export class GPXApp {
       console.error("Error clearing GPX:", error);
       this.ui.showStatus("Error clearing GPX");
     }
-  }
-
-  handleCenterMap() {
-    if (this.locationTracker.centerOnLocation()) {
-      return;
-    } else if (window.gpxLayer) {
-      this.map.fitBounds(window.gpxLayer.getBounds());
-      this.ui.showStatus("Centered on GPX route");
-    } else if (!this.locationTracker.getFollowMode()) {
-      this.ui.showStatus("Enable follow mode to track your location");
-    } else {
-      this.ui.showStatus("No location or route to center on");
-    }
-  }
-
-  async handleCompassDebug() {
-    // Toggle debug display
-    this.ui.toggleDebugDisplay();
-
-    this.ui.showDebugInfo("=== 🔍 COMPASS DEBUG START ===");
-
-    // Check if DeviceOrientationEvent is available
-    const deviceOrientationSupport = !!window.DeviceOrientationEvent;
-    this.ui.showDebugInfo(
-      `📱 DeviceOrientationEvent support: ${
-        deviceOrientationSupport ? "✅" : "❌"
-      }`
-    );
-
-    // Check if permission API is available
-    const permissionApiAvailable =
-      typeof DeviceOrientationEvent?.requestPermission === "function";
-    this.ui.showDebugInfo(
-      `🔐 Permission API available: ${permissionApiAvailable ? "✅" : "❌"}`
-    );
-
-    // Check current protocol
-    this.ui.showDebugInfo(`🔒 Current protocol: ${window.location.protocol}`);
-    this.ui.showDebugInfo(
-      `🔒 Is HTTPS: ${window.location.protocol === "https:" ? "✅" : "❌"}`
-    );
-
-    // Check user agent for iOS
-    const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-    this.ui.showDebugInfo(`🍎 Is iOS: ${isIOS ? "✅" : "❌"}`);
-
-    // Test compass permission
-    try {
-      await this.locationTracker.requestCompassPermission();
-    } catch (error) {
-      this.ui.showDebugInfo(`❌ Compass permission error: ${error.message}`);
-    }
-
-    // Force re-initialization of compass
-    this.ui.showDebugInfo("🔄 Re-initializing compass...");
-    this.locationTracker.initCompass();
-
-    this.ui.showDebugInfo("=== 🏁 COMPASS DEBUG END ===");
   }
 }
 
