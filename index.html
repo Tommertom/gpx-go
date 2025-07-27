@@ -19,11 +19,6 @@
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#4CAF50" />
 
-    <!-- Cache Control - Expire after 1 hour -->
-    <meta http-equiv="Cache-Control" content="max-age=3600, must-revalidate" />
-    <meta http-equiv="Expires" content="3600" />
-    <meta http-equiv="Pragma" content="no-cache" />
-
     <!-- Web App Manifest -->
     <link rel="manifest" href="./manifest.json" />
 
@@ -150,5 +145,21 @@
 
     <!-- Custom JavaScript - Modular -->
     <script type="module" src="./app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("./sw.js").then(
+            function (registration) {
+              console.log("SW registered: ", registration);
+            },
+            function (registrationError) {
+              console.log("SW registration failed: ", registrationError);
+            }
+          );
+        });
+      }
+    </script>
   </body>
 </html>

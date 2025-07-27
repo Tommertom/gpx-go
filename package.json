@@ -1,0 +1,19 @@
+{
+  "name": "gpx-go-deploy",
+  "version": "1.0.0",
+  "description": "Deployment script for GPX Go!",
+  "main": "deploy.js",
+  "scripts": {
+    "deploy": "node deploy.js",
+    "serve": "python -m http.server 8080",
+    "dev": "python -m http.server 8080"
+  },
+  "keywords": [
+    "gpx",
+    "gps",
+    "pwa",
+    "deployment"
+  ],
+  "author": "Tommertom",
+  "license": "MIT"
+}
