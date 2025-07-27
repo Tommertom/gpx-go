@@ -11,7 +11,7 @@ export class UIController {
       if (desktopButton) desktopButton.textContent = "Clear GPX";
       if (mobileButton) mobileButton.textContent = "Clear GPX";
     } else {
-      if (desktopButton) desktopButton.textContent = "Load GPX";
+      if (desktopButton) desktopButton.textContent = "Load GPX1";
       if (mobileButton) mobileButton.textContent = "Load GPX";
     }
   }
