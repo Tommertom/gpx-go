@@ -5,10 +5,16 @@
       "firebase.json",
       "**/.*",
       "**/node_modules/**",
-      "dev.bat",
+      "**/*.bat",
+      "**/*.exe",
+      "**/*.ps1",
       "deploy.js",
-      "deploy.bat",
-      "package.json"
+      "package.json",
+      "package-lock.json",
+      "generate-icons.js",
+      "icon-generator.html",
+      "favicon-generator.html",
+      "README.md"
     ],
     "headers": [
       {

@@ -1,5 +1,5 @@
 // Service Worker for GPX Go!
-const CACHE_NAME = "gpx-go-v1";
+const CACHE_NAME = "gpx-go-v4";
 const urlsToCache = [
   "./",
   "./index.html",
@@ -8,6 +8,14 @@ const urlsToCache = [
   "./fk.json",
   "./manifest.json",
   "./favicon.png",
+  "./assets/icon-72x72.png",
+  "./assets/icon-96x96.png",
+  "./assets/icon-128x128.png",
+  "./assets/icon-144x144.png",
+  "./assets/icon-152x152.png",
+  "./assets/icon-192x192.png",
+  "./assets/icon-384x384.png",
+  "./assets/icon-512x512.png",
   "./modules/config.js",
   "./modules/coordinates.js",
   "./modules/gpxProcessor.js",

@@ -99,7 +99,27 @@ The previous data loss issue occurred due to:
 
 ## Development
 
-To run locally:
+### Setting Up Icons
+Generate optimized PWA icons from your favicon.png:
+
+```bash
+# Option 1: Using npm script
+npm run generate-icons
+
+# Option 2: Using batch file
+generate-icons.bat
+
+# Option 3: Using Node.js directly
+node generate-icons.js
+```
+
+This will:
+- 📦 Generate 8 different icon sizes (72x72 to 512x512)
+- 💾 Save all icons in the `assets/` folder
+- ✏️ Update `manifest.json` with proper icon paths and purposes
+- 🔧 Update `firebase.json` to include assets in deployment
+
+### Running Locally
 ```bash
 # Option 1: Use the dev script
 dev.bat

@@ -6,7 +6,8 @@
   "scripts": {
     "deploy": "node deploy.js",
     "serve": "python -m http.server 8080",
-    "dev": "python -m http.server 8080"
+    "dev": "python -m http.server 8080",
+    "generate-icons": "node generate-icons.js"
   },
   "keywords": [
     "gpx",
@@ -15,5 +16,8 @@
     "deployment"
   ],
   "author": "Tommertom",
-  "license": "MIT"
+  "license": "MIT",
+  "dependencies": {
+    "sharp": "^0.32.6"
+  }
 }

@@ -70,6 +70,9 @@ node_modules/
 
 # Local data files
 fk.json
-dev.bat
+
 .firebaserc
 firebase.json
+deploy.bat
+deploy.js
+dev.bat
