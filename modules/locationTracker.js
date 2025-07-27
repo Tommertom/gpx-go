@@ -12,6 +12,9 @@ export class LocationTracker {
     this.initialLocationSet = false;
     this.compassInitialized = false;
     this.compassPermissionRequested = false;
+    this.lastPosition = null;
+    this.lastTimestamp = null;
+    this.orientationHandler = null; // Store reference to bound handler
     // Don't initialize compass here - wait for user action
   }
 
@@ -28,6 +31,41 @@ export class LocationTracker {
     this.watchId = navigator.geolocation.watchPosition(
       (pos) => {
         const latlng = [pos.coords.latitude, pos.coords.longitude];
+        const currentTimestamp = Date.now();
+
+        // Calculate speed if we have a previous position
+        let speedKmh = 0;
+        if (this.lastPosition && this.lastTimestamp && this.followMode) {
+          // Use GPS speed if available and reliable
+          if (
+            pos.coords.speed !== null &&
+            pos.coords.speed !== undefined &&
+            pos.coords.speed >= 0
+          ) {
+            speedKmh = pos.coords.speed * 3.6; // Convert m/s to km/h
+          } else {
+            // Calculate speed from position change
+            const deltaTime = (currentTimestamp - this.lastTimestamp) / 1000; // seconds
+            if (deltaTime > 0) {
+              const distance = this.calculateDistance(
+                this.lastPosition[0],
+                this.lastPosition[1],
+                latlng[0],
+                latlng[1]
+              );
+              speedKmh = (distance / deltaTime) * 3.6; // Convert m/s to km/h
+            }
+          }
+        }
+
+        // Update speed display if in follow mode
+        if (this.followMode) {
+          this.ui.updateSpeedDisplay(speedKmh);
+        }
+
+        // Store current position and timestamp for next calculation
+        this.lastPosition = latlng;
+        this.lastTimestamp = currentTimestamp;
 
         if (!this.userMarker) {
           this.userMarker = L.marker(latlng, {
@@ -61,13 +99,24 @@ export class LocationTracker {
     }
   }
 
+  stopCompass() {
+    if (this.orientationHandler && window.DeviceOrientationEvent) {
+      window.removeEventListener(
+        "deviceorientation",
+        this.orientationHandler,
+        true
+      );
+      this.orientationHandler = null;
+    }
+  }
+
   toggleFollowMode() {
     this.followMode = !this.followMode;
     this.ui.updateFollowButtons(this.followMode);
 
     // Show status
     this.ui.showStatus(
-      this.followMode ? "Follow mode enabled" : "Follow mode disabled"
+      this.followMode ? "Follow Me mode enabled" : "Follow Me mode disabled"
     );
 
     if (this.followMode) {
@@ -77,6 +126,10 @@ export class LocationTracker {
         this.compassInitialized = true;
       }
 
+      // Reset speed tracking
+      this.lastPosition = null;
+      this.lastTimestamp = null;
+
       // Start watching position when follow mode is enabled
       this.startWatching();
       if (this.userMarker) {
@@ -85,22 +138,26 @@ export class LocationTracker {
     } else {
       // Stop watching position when follow mode is disabled
       this.stopWatching();
+      // Stop compass tracking to save battery
+      this.stopCompass();
+      // Reset speed tracking
+      this.lastPosition = null;
+      this.lastTimestamp = null;
     }
-  }
-
-  centerOnLocation() {
-    if (this.userMarker) {
-      this.map.setView(this.userMarker.getLatLng(), this.map.getZoom());
-      this.ui.showStatus("Centered on your location");
-      return true;
-    }
-    return false;
   }
 
   initCompass() {
     if (!window.DeviceOrientationEvent) {
       this.ui.showStatus("Compass not supported on this device", 3000);
       return;
+    }
+
+    // Reset compass rotation state when initializing
+    this.ui.resetCompassRotation();
+
+    // Create bound event handler if not already created
+    if (!this.orientationHandler) {
+      this.orientationHandler = (event) => this.handleOrientation(event);
     }
 
     if (typeof DeviceOrientationEvent.requestPermission === "function") {
@@ -112,7 +169,7 @@ export class LocationTracker {
             if (permissionState === "granted") {
               window.addEventListener(
                 "deviceorientation",
-                (event) => this.handleOrientation(event),
+                this.orientationHandler,
                 true
               );
               this.ui.showStatus("Compass permission granted", 2000);
@@ -129,7 +186,7 @@ export class LocationTracker {
       // No permission request needed for non-iOS devices
       window.addEventListener(
         "deviceorientation",
-        (event) => this.handleOrientation(event),
+        this.orientationHandler,
         true
       );
     }
@@ -184,12 +241,23 @@ export class LocationTracker {
     this.ui.updateCompassDisplay(heading);
   }
 
-  getFollowMode() {
-    return this.followMode;
-  }
-
   getUserMarker() {
     return this.userMarker;
+  }
+
+  // Calculate distance between two coordinates using Haversine formula
+  calculateDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371000; // Earth's radius in meters
+    const dLat = (lat2 - lat1) * (Math.PI / 180);
+    const dLon = (lon2 - lon1) * (Math.PI / 180);
+    const a =
+      Math.sin(dLat / 2) * Math.sin(dLat / 2) +
+      Math.cos(lat1 * (Math.PI / 180)) *
+        Math.cos(lat2 * (Math.PI / 180)) *
+        Math.sin(dLon / 2) *
+        Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c; // Distance in meters
   }
 
   // Debug method to manually request compass permission
@@ -212,9 +280,14 @@ export class LocationTracker {
             permissionState === "granted" &&
             !this.compassPermissionRequested
           ) {
+            // Create bound event handler if not already created
+            if (!this.orientationHandler) {
+              this.orientationHandler = (event) =>
+                this.handleOrientation(event);
+            }
             window.addEventListener(
               "deviceorientation",
-              (event) => this.handleOrientation(event),
+              this.orientationHandler,
               true
             );
             this.compassPermissionRequested = true;
@@ -239,9 +312,13 @@ export class LocationTracker {
 
       // Add event listener if not already added
       if (!this.compassPermissionRequested) {
+        // Create bound event handler if not already created
+        if (!this.orientationHandler) {
+          this.orientationHandler = (event) => this.handleOrientation(event);
+        }
         window.addEventListener(
           "deviceorientation",
-          (event) => this.handleOrientation(event),
+          this.orientationHandler,
           true
         );
         this.compassPermissionRequested = true;

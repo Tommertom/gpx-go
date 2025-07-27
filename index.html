@@ -2,7 +2,10 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+    />
     <title>GPX Go!</title>
 
     <!-- PWA Meta Tags -->
@@ -15,11 +18,6 @@
     <meta name="apple-mobile-web-app-title" content="GPX Go!" />
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="theme-color" content="#4CAF50" />
-
-    <!-- Cache Control - Expire after 1 hour -->
-    <meta http-equiv="Cache-Control" content="max-age=3600, must-revalidate" />
-    <meta http-equiv="Expires" content="3600" />
-    <meta http-equiv="Pragma" content="no-cache" />
 
     <!-- Web App Manifest -->
     <link rel="manifest" href="./manifest.json" />
@@ -47,6 +45,7 @@
     <div id="status"></div>
 
     <div id="compass-direction"></div>
+    <div id="speed-display"></div>
 
     <!-- Debug display area -->
     <div
@@ -128,17 +127,13 @@
     </div>
 
     <div id="controls">
-      <button id="toggleFollow">Follow</button>
+      <button id="toggleFollow">Follow Me</button>
     </div>
 
     <!-- Mobile bottom control panel -->
     <div id="bottom-controls">
       <button id="gpxButtonMobile">Load GPX</button>
-      <button id="toggleFollowMobile">Follow</button>
-      <button id="centerMap">Center</button>
-      <button id="compassDebug" style="background-color: #ff9800">
-        Compass Debug
-      </button>
+      <button id="toggleFollowMobile">Follow Me</button>
     </div>
 
     <div id="map"></div>
@@ -150,5 +145,21 @@
 
     <!-- Custom JavaScript - Modular -->
     <script type="module" src="./app.js"></script>
+
+    <!-- Service Worker Registration -->
+    <script>
+      if ("serviceWorker" in navigator) {
+        window.addEventListener("load", function () {
+          navigator.serviceWorker.register("./sw.js").then(
+            function (registration) {
+              console.log("SW registered: ", registration);
+            },
+            function (registrationError) {
+              console.log("SW registration failed: ", registrationError);
+            }
+          );
+        });
+      }
+    </script>
   </body>
 </html>

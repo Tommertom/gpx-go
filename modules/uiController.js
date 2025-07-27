@@ -1,6 +1,9 @@
 export class UIController {
   constructor() {
     this.initEventListeners();
+    this.previousHeading = null;
+    this.accumulatedRotation = 0;
+    this.displayColorToggled = false; // Track shared color state for both compass and speed
   }
 
   updateGpxButtonStates(gpxLoaded) {
@@ -11,7 +14,7 @@ export class UIController {
       if (desktopButton) desktopButton.textContent = "Clear GPX";
       if (mobileButton) mobileButton.textContent = "Clear GPX";
     } else {
-      if (desktopButton) desktopButton.textContent = "Load GPX1";
+      if (desktopButton) desktopButton.textContent = "Load GPX";
       if (mobileButton) mobileButton.textContent = "Load GPX";
     }
   }
@@ -89,7 +92,7 @@ export class UIController {
 
       const deleteButton = document.createElement("button");
       deleteButton.className = "gpx-delete-btn";
-      deleteButton.innerHTML = "🗑️";
+      deleteButton.innerHTML = "🗑";
       deleteButton.title = `Delete ${gpxFile.displayName}`;
 
       fileItem.addEventListener("mouseenter", () => {
@@ -203,44 +206,154 @@ export class UIController {
         }
       });
     }
+
+    // Initialize double-tap zoom prevention
+    this.initDoubleTapPrevention();
   }
 
   initCompassDisplay() {
     const compassDisplay = document.getElementById("compass-direction");
     if (compassDisplay) {
-      compassDisplay.textContent = "Nothing";
+      compassDisplay.textContent = "";
       compassDisplay.style.display = "block";
+      compassDisplay.style.color = "lightgray"; // Set initial color
+      compassDisplay.style.cursor = "pointer"; // Make it look clickable
+
+      // Add click event listener for color toggle
+      compassDisplay.addEventListener("click", () => {
+        this.toggleDisplayColors();
+      });
     }
+
+    // Initialize speed display
+    const speedDisplay = document.getElementById("speed-display");
+    if (speedDisplay) {
+      speedDisplay.textContent = "0 km/h";
+      speedDisplay.style.display = "none"; // Hidden by default
+      speedDisplay.style.color = "lightgray"; // Set initial color
+      speedDisplay.style.cursor = "pointer"; // Make it look clickable
+
+      // Add click event listener for color toggle
+      speedDisplay.addEventListener("click", () => {
+        this.toggleDisplayColors();
+      });
+    }
+
+    // Reset compass rotation state
+    this.resetCompassRotation();
+  }
+
+  toggleDisplayColors() {
+    this.displayColorToggled = !this.displayColorToggled;
+    const color = this.displayColorToggled ? "black" : "lightgray";
+
+    // Update compass color
+    const compassDisplay = document.getElementById("compass-direction");
+    if (compassDisplay) {
+      compassDisplay.style.color = color;
+    }
+
+    // Update speed color
+    const speedDisplay = document.getElementById("speed-display");
+    if (speedDisplay) {
+      speedDisplay.style.color = color;
+    }
+  }
+
+  resetCompassRotation() {
+    this.previousHeading = null;
+    this.accumulatedRotation = 0;
   }
 
   updateCompassDisplay(heading) {
     const compassDisplay = document.getElementById("compass-direction");
 
     if (heading !== null) {
-      // Update the arrow rotation
+      // Update the arrow rotation with smooth boundary handling
       const svg = document.querySelector(".arrow");
       if (svg) {
-        svg.style.transform = `rotate(${heading}deg)`;
+        if (this.previousHeading !== null) {
+          // Calculate the shortest rotation path
+          let delta = heading - this.previousHeading;
+
+          // Handle 360°/0° boundary crossings
+          if (delta > 180) {
+            delta -= 360; // Going from ~1° to ~359° should be negative rotation
+          } else if (delta < -180) {
+            delta += 360; // Going from ~359° to ~1° should be positive rotation
+          }
+
+          // Update accumulated rotation
+          this.accumulatedRotation += delta;
+        } else {
+          // First heading value, just set it directly
+          this.accumulatedRotation = heading;
+        }
+
+        // Apply the rotation using accumulated value
+        svg.style.transform = `rotate(${this.accumulatedRotation}deg)`;
+
+        // Store the current heading for next calculation
+        this.previousHeading = heading;
       }
 
       // Update the compass direction display
       if (compassDisplay) {
         compassDisplay.textContent = `${Math.round(heading)}°`;
         compassDisplay.style.display = "block";
+        // Preserve the color state when updating
+        compassDisplay.style.color = this.displayColorToggled
+          ? "black"
+          : "lightgray";
       }
     } else {
       // No compass heading available
       if (compassDisplay) {
-        compassDisplay.textContent = "Nothing";
+        compassDisplay.textContent = "";
         compassDisplay.style.display = "block";
+        // Preserve the color state even when no heading is available
+        compassDisplay.style.color = this.displayColorToggled
+          ? "black"
+          : "lightgray";
       }
     }
   }
 
   updateFollowButtons(followMode) {
-    const followText = followMode ? "Unfollow" : "Follow";
+    const followText = followMode ? "Unfollow Me" : "Follow Me";
     document.getElementById("toggleFollow").textContent = followText;
     document.getElementById("toggleFollowMobile").textContent = followText;
+
+    // Show/hide speed display based on follow mode
+    const speedDisplay = document.getElementById("speed-display");
+    if (speedDisplay) {
+      if (followMode) {
+        speedDisplay.style.display = "block";
+      } else {
+        speedDisplay.style.display = "none";
+      }
+    }
+
+    // Show/hide compass display based on follow mode
+    const compassDisplay = document.getElementById("compass-direction");
+    if (compassDisplay) {
+      if (followMode) {
+        compassDisplay.style.display = "block";
+      } else {
+        compassDisplay.style.display = "none";
+      }
+    }
+  }
+
+  updateSpeedDisplay(speedKmh) {
+    const speedDisplay = document.getElementById("speed-display");
+    if (speedDisplay) {
+      speedDisplay.textContent = `${Math.round(speedKmh)} km/h`;
+      // Preserve the color state when updating
+      speedDisplay.style.color = this.displayColorToggled
+        ? "black"
+        : "lightgray";
+    }
   }
 
   showDebugInfo(message) {
@@ -290,5 +403,99 @@ export class UIController {
   isDebugMode() {
     const debugDiv = document.getElementById("debug-info");
     return debugDiv && debugDiv.style.display === "block";
+  }
+
+  initDoubleTapPrevention() {
+    let lastTouchEnd = 0;
+    let touchStartTime = 0;
+    let touchCount = 0;
+
+    // Prevent double-tap zoom on the entire document
+    document.addEventListener(
+      "touchstart",
+      (e) => {
+        touchStartTime = Date.now();
+        touchCount++;
+
+        // Reset touch count after a delay
+        setTimeout(() => {
+          touchCount = 0;
+        }, 300);
+      },
+      { passive: true }
+    );
+
+    document.addEventListener(
+      "touchend",
+      (e) => {
+        const now = Date.now();
+        const touchDuration = now - touchStartTime;
+
+        // If this is a quick tap (< 300ms) and we've had multiple taps
+        if (touchDuration < 300 && touchCount > 1) {
+          // Check if this is within the double-tap time window
+          if (now - lastTouchEnd <= 300) {
+            e.preventDefault();
+            e.stopPropagation();
+            return false;
+          }
+        }
+
+        lastTouchEnd = now;
+      },
+      { passive: false }
+    );
+
+    // Additional prevention for specific iOS Safari issues
+    document.addEventListener(
+      "gesturestart",
+      (e) => {
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+
+    document.addEventListener(
+      "gesturechange",
+      (e) => {
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+
+    document.addEventListener(
+      "gestureend",
+      (e) => {
+        e.preventDefault();
+      },
+      { passive: false }
+    );
+
+    // Prevent zoom via meta viewport manipulation
+    this.preventViewportZoom();
+  }
+
+  preventViewportZoom() {
+    // Dynamically ensure viewport settings are maintained
+    let viewport = document.querySelector('meta[name="viewport"]');
+    if (viewport) {
+      viewport.setAttribute(
+        "content",
+        "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+      );
+    }
+
+    // Handle orientation changes to maintain zoom prevention
+    window.addEventListener("orientationchange", () => {
+      setTimeout(() => {
+        viewport = document.querySelector('meta[name="viewport"]');
+        if (viewport) {
+          viewport.setAttribute(
+            "content",
+            "width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
+          );
+        }
+      }, 100);
+    });
   }
 }

@@ -57,12 +57,11 @@ export class StorageManager {
       // Find all GPX keys in localStorage
       for (let i = 0; i < localStorage.length; i++) {
         const key = localStorage.key(i);
-        if (key && key.startsWith(CONFIG.STORAGE_KEYS.GPX_PREFIX)) {
-          // Skip waypoint files
-          if (key.endsWith(CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX)) {
-            continue;
-          }
-
+        if (
+          key &&
+          key.startsWith(CONFIG.STORAGE_KEYS.GPX_PREFIX) &&
+          key.endsWith(".gpx")
+        ) {
           const filename = key.substring(CONFIG.STORAGE_KEYS.GPX_PREFIX.length);
           const savedData = localStorage.getItem(key);
 
@@ -205,58 +204,16 @@ export class StorageManager {
         localStorage.removeItem(
           `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${currentGpxFilename}${CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX}`
         );
-        console.log(`Cleared cached waypoints for ${currentGpxFilename}`);
+        console.log(
+          `Cleared cached waypoints for ${currentGpxFilename}`,
+          `${CONFIG.STORAGE_KEYS.GPX_PREFIX}${currentGpxFilename}${CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX}`
+        );
       }
 
       return currentGpxFilename;
     } catch (error) {
       console.error("Error clearing GPX from localStorage:", error);
       throw error;
-    }
-  }
-
-  cleanup() {
-    try {
-      const lastGpxFilename = localStorage.getItem(
-        CONFIG.STORAGE_KEYS.LAST_GPX
-      );
-      const keysToRemove = [];
-
-      // Find all GPX keys in localStorage
-      for (let i = 0; i < localStorage.length; i++) {
-        const key = localStorage.key(i);
-        if (key && key.startsWith(CONFIG.STORAGE_KEYS.GPX_PREFIX)) {
-          // Extract filename - handle both regular GPX files and waypoint files
-          let filename;
-          if (key.endsWith(CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX)) {
-            filename = key.substring(
-              CONFIG.STORAGE_KEYS.GPX_PREFIX.length,
-              key.length - CONFIG.STORAGE_KEYS.WAYPOINT_SUFFIX.length
-            );
-          } else {
-            filename = key.substring(CONFIG.STORAGE_KEYS.GPX_PREFIX.length);
-          }
-
-          // If this isn't the current GPX file, mark for removal
-          if (filename !== lastGpxFilename) {
-            keysToRemove.push(key);
-          }
-        }
-      }
-
-      // Remove old GPX files and their waypoints
-      keysToRemove.forEach((key) => {
-        localStorage.removeItem(key);
-        console.log(`Cleaned up old GPX file: ${key}`);
-      });
-
-      if (keysToRemove.length > 0) {
-        console.log(
-          `Cleaned up ${keysToRemove.length} old GPX files and waypoints`
-        );
-      }
-    } catch (error) {
-      console.error("Error cleaning up old GPX files:", error);
     }
   }
 }
