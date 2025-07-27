@@ -286,4 +286,9 @@ export class UIController {
       debugContent.innerHTML = "";
     }
   }
+
+  isDebugMode() {
+    const debugDiv = document.getElementById("debug-info");
+    return debugDiv && debugDiv.style.display === "block";
+  }
 }
