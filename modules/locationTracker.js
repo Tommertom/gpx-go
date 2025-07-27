@@ -14,6 +14,7 @@ export class LocationTracker {
     this.compassPermissionRequested = false;
     this.lastPosition = null;
     this.lastTimestamp = null;
+    this.orientationHandler = null; // Store reference to bound handler
     // Don't initialize compass here - wait for user action
   }
 
@@ -98,6 +99,17 @@ export class LocationTracker {
     }
   }
 
+  stopCompass() {
+    if (this.orientationHandler && window.DeviceOrientationEvent) {
+      window.removeEventListener(
+        "deviceorientation",
+        this.orientationHandler,
+        true
+      );
+      this.orientationHandler = null;
+    }
+  }
+
   toggleFollowMode() {
     this.followMode = !this.followMode;
     this.ui.updateFollowButtons(this.followMode);
@@ -126,6 +138,8 @@ export class LocationTracker {
     } else {
       // Stop watching position when follow mode is disabled
       this.stopWatching();
+      // Stop compass tracking to save battery
+      this.stopCompass();
       // Reset speed tracking
       this.lastPosition = null;
       this.lastTimestamp = null;
@@ -141,6 +155,11 @@ export class LocationTracker {
     // Reset compass rotation state when initializing
     this.ui.resetCompassRotation();
 
+    // Create bound event handler if not already created
+    if (!this.orientationHandler) {
+      this.orientationHandler = (event) => this.handleOrientation(event);
+    }
+
     if (typeof DeviceOrientationEvent.requestPermission === "function") {
       // iOS 13+ requires user gesture to request permission
       if (!this.compassPermissionRequested) {
@@ -150,7 +169,7 @@ export class LocationTracker {
             if (permissionState === "granted") {
               window.addEventListener(
                 "deviceorientation",
-                (event) => this.handleOrientation(event),
+                this.orientationHandler,
                 true
               );
               this.ui.showStatus("Compass permission granted", 2000);
@@ -167,7 +186,7 @@ export class LocationTracker {
       // No permission request needed for non-iOS devices
       window.addEventListener(
         "deviceorientation",
-        (event) => this.handleOrientation(event),
+        this.orientationHandler,
         true
       );
     }
@@ -261,9 +280,14 @@ export class LocationTracker {
             permissionState === "granted" &&
             !this.compassPermissionRequested
           ) {
+            // Create bound event handler if not already created
+            if (!this.orientationHandler) {
+              this.orientationHandler = (event) =>
+                this.handleOrientation(event);
+            }
             window.addEventListener(
               "deviceorientation",
-              (event) => this.handleOrientation(event),
+              this.orientationHandler,
               true
             );
             this.compassPermissionRequested = true;
@@ -288,9 +312,13 @@ export class LocationTracker {
 
       // Add event listener if not already added
       if (!this.compassPermissionRequested) {
+        // Create bound event handler if not already created
+        if (!this.orientationHandler) {
+          this.orientationHandler = (event) => this.handleOrientation(event);
+        }
         window.addEventListener(
           "deviceorientation",
-          (event) => this.handleOrientation(event),
+          this.orientationHandler,
           true
         );
         this.compassPermissionRequested = true;

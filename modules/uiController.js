@@ -3,8 +3,7 @@ export class UIController {
     this.initEventListeners();
     this.previousHeading = null;
     this.accumulatedRotation = 0;
-    this.compassColorToggled = false; // Track compass color state
-    this.speedColorToggled = false; // Track speed color state
+    this.displayColorToggled = false; // Track shared color state for both compass and speed
   }
 
   updateGpxButtonStates(gpxLoaded) {
@@ -219,7 +218,7 @@ export class UIController {
 
       // Add click event listener for color toggle
       compassDisplay.addEventListener("click", () => {
-        this.toggleCompassColor();
+        this.toggleDisplayColors();
       });
     }
 
@@ -233,7 +232,7 @@ export class UIController {
 
       // Add click event listener for color toggle
       speedDisplay.addEventListener("click", () => {
-        this.toggleSpeedColor();
+        this.toggleDisplayColors();
       });
     }
 
@@ -241,21 +240,20 @@ export class UIController {
     this.resetCompassRotation();
   }
 
-  toggleCompassColor() {
+  toggleDisplayColors() {
+    this.displayColorToggled = !this.displayColorToggled;
+    const color = this.displayColorToggled ? "black" : "lightgray";
+
+    // Update compass color
     const compassDisplay = document.getElementById("compass-direction");
     if (compassDisplay) {
-      this.compassColorToggled = !this.compassColorToggled;
-      compassDisplay.style.color = this.compassColorToggled
-        ? "black"
-        : "lightgray";
+      compassDisplay.style.color = color;
     }
-  }
 
-  toggleSpeedColor() {
+    // Update speed color
     const speedDisplay = document.getElementById("speed-display");
     if (speedDisplay) {
-      this.speedColorToggled = !this.speedColorToggled;
-      speedDisplay.style.color = this.speedColorToggled ? "black" : "lightgray";
+      speedDisplay.style.color = color;
     }
   }
 
@@ -301,7 +299,7 @@ export class UIController {
         compassDisplay.textContent = `${Math.round(heading)}°`;
         compassDisplay.style.display = "block";
         // Preserve the color state when updating
-        compassDisplay.style.color = this.compassColorToggled
+        compassDisplay.style.color = this.displayColorToggled
           ? "black"
           : "lightgray";
       }
@@ -311,7 +309,7 @@ export class UIController {
         compassDisplay.textContent = "";
         compassDisplay.style.display = "block";
         // Preserve the color state even when no heading is available
-        compassDisplay.style.color = this.compassColorToggled
+        compassDisplay.style.color = this.displayColorToggled
           ? "black"
           : "lightgray";
       }
@@ -332,6 +330,16 @@ export class UIController {
         speedDisplay.style.display = "none";
       }
     }
+
+    // Show/hide compass display based on follow mode
+    const compassDisplay = document.getElementById("compass-direction");
+    if (compassDisplay) {
+      if (followMode) {
+        compassDisplay.style.display = "block";
+      } else {
+        compassDisplay.style.display = "none";
+      }
+    }
   }
 
   updateSpeedDisplay(speedKmh) {
@@ -339,7 +347,9 @@ export class UIController {
     if (speedDisplay) {
       speedDisplay.textContent = `${Math.round(speedKmh)} km/h`;
       // Preserve the color state when updating
-      speedDisplay.style.color = this.speedColorToggled ? "black" : "lightgray";
+      speedDisplay.style.color = this.displayColorToggled
+        ? "black"
+        : "lightgray";
     }
   }
 
