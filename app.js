@@ -70,21 +70,41 @@ export class GPXApp {
     const gpxButton = document.getElementById("gpxButton");
     const gpxButtonMobile = document.getElementById("gpxButtonMobile");
 
-    const handleLoadGpx = () => {
-      // Check if there are stored GPX files
-      const storedGpxFiles = this.storage.getAllStoredGpxFiles();
+    const handleLoadGpx = async () => {
+      try {
+        // Show loading state
+        const loadingMessage = "Loading GPX files...";
+        this.ui.showStatus(loadingMessage, 1000);
 
-      if (storedGpxFiles.length === 0) {
-        // No stored files, show file upload dialog directly
-        document.getElementById("gpxFile").click();
-      } else {
-        // Show selection dialog with stored files
-        this.ui.showGpxSelectionDialog(
-          storedGpxFiles,
-          (filename) => this.loadStoredGpx(filename),
-          () => document.getElementById("gpxFile").click(),
-          (filename) => this.deleteGpxFile(filename)
-        );
+        // Check if there are stored GPX files
+        const storedGpxFiles = await this.storage.getAllStoredGpxFiles();
+
+        if (storedGpxFiles.length === 0) {
+          // No stored files, show file upload dialog directly
+          document.getElementById("gpxFile").click();
+        } else {
+          // Show selection dialog with stored files
+          this.ui.showGpxSelectionDialog(
+            storedGpxFiles,
+            (filename) => this.loadStoredGpx(filename),
+            () => document.getElementById("gpxFile").click(),
+            (filename) => this.deleteGpxFile(filename)
+          );
+        }
+      } catch (error) {
+        console.error("Error in handleLoadGpx:", error);
+        this.ui.showStatus("Error loading GPX files. Please try again.", 3000);
+
+        // Fallback: try to open file dialog directly
+        try {
+          document.getElementById("gpxFile").click();
+        } catch (fallbackError) {
+          console.error("Fallback file dialog also failed:", fallbackError);
+          this.ui.showStatus(
+            "Error: Cannot open file dialog. Please refresh the page.",
+            5000
+          );
+        }
       }
     };
 
@@ -96,20 +116,58 @@ export class GPXApp {
 
     if (gpxButtonMobile) {
       gpxButtonMobile.addEventListener("click", () => {
-        this.ui.handleGpxButtonClick(() => this.clearGpx(), handleLoadGpx);
+        // Apply same protection to mobile button
+        if (gpxButtonMobile.textContent === "Load GPX") {
+          gpxButtonMobile.disabled = true;
+          const originalText = gpxButtonMobile.textContent;
+          gpxButtonMobile.textContent = "Loading...";
+
+          Promise.resolve(handleLoadGpx()).finally(() => {
+            setTimeout(() => {
+              gpxButtonMobile.disabled = false;
+              if (gpxButtonMobile.textContent === "Loading...") {
+                gpxButtonMobile.textContent = originalText;
+              }
+            }, 500);
+          });
+        } else {
+          this.clearGpx();
+        }
       });
     }
   }
 
-  initializeApp() {
-    // Check for saved GPX
-    const savedGpx = this.storage.loadGpx();
-    if (!savedGpx) {
-      this.ui.updateGpxButtonStates(false);
-    }
+  async initializeApp() {
+    try {
+      // Ensure storage is initialized before proceeding
+      const storageReady = await this.storage.ensureInitialized();
+      if (!storageReady) {
+        console.warn(
+          "Storage initialization failed, some features may not work properly"
+        );
+        this.ui.showStatus(
+          "Warning: Storage not available. Some features may not work.",
+          5000
+        );
+      }
 
-    // Initialize compass display
-    this.ui.initCompassDisplay();
+      // Check for saved GPX
+      const savedGpx = await this.storage.loadGpx();
+      if (!savedGpx) {
+        this.ui.updateGpxButtonStates(false);
+      }
+
+      // Initialize compass display
+      this.ui.initCompassDisplay();
+
+      console.log("App initialization complete");
+    } catch (error) {
+      console.error("Error during app initialization:", error);
+      this.ui.showStatus(
+        "App initialization error. Some features may not work.",
+        5000
+      );
+    }
   }
 
   async loadInitialData() {
@@ -134,29 +192,35 @@ export class GPXApp {
     }
   }
 
-  loadSavedGpx() {
-    const savedGpx = this.storage.loadGpx();
-    if (savedGpx) {
-      console.log("Loading saved GPX from localStorage:", savedGpx.filename);
-      this.ui.updateGpxButtonStates(true);
-      this.gpxProcessor.processGpxContent(
-        savedGpx.content,
-        savedGpx.filename,
-        this.jsonPointsData
-      );
-    } else {
+  async loadSavedGpx() {
+    try {
+      const savedGpx = await this.storage.loadGpx();
+      if (savedGpx) {
+        console.log("Loading saved GPX from IndexedDB:", savedGpx.filename);
+        this.ui.updateGpxButtonStates(true);
+        this.gpxProcessor.processGpxContent(
+          savedGpx.content,
+          savedGpx.filename,
+          this.jsonPointsData
+        );
+      } else {
+        this.ui.updateGpxButtonStates(false);
+      }
+    } catch (error) {
+      console.error("Error loading saved GPX:", error);
       this.ui.updateGpxButtonStates(false);
+      this.ui.showStatus("Error loading saved GPX file", 3000);
     }
   }
 
-  loadStoredGpx(filename) {
-    const gpxData = this.storage.loadGpxByFilename(filename);
+  async loadStoredGpx(filename) {
+    const gpxData = await this.storage.loadGpxByFilename(filename);
     if (gpxData) {
       console.log("Loading stored GPX:", filename);
       this.ui.showStatus(`Loading ${filename}...`, 2000);
 
-      // Set this as the current GPX file
-      localStorage.setItem(CONFIG.STORAGE_KEYS.LAST_GPX, filename);
+      // Set this as the current GPX file using storage
+      await this.storage.saveGpx(gpxData.content, filename);
 
       this.ui.updateGpxButtonStates(true);
 
@@ -173,18 +237,16 @@ export class GPXApp {
     }
   }
 
-  deleteGpxFile(filename) {
+  async deleteGpxFile(filename) {
     try {
-      const success = this.storage.deleteGpxFile(filename);
+      const success = await this.storage.deleteGpxFile(filename);
       if (success) {
         this.ui.showStatus(`Deleted ${filename}`, 2000);
 
         // If this was the currently loaded GPX file, clear the map
-        const currentGpxFilename = localStorage.getItem(
-          CONFIG.STORAGE_KEYS.LAST_GPX
-        );
+        const currentGpxFilename = await this.storage.getCurrentGpxFilename();
         if (!currentGpxFilename || currentGpxFilename === filename) {
-          this.clearGpx();
+          await this.clearGpx();
         }
 
         return true;
@@ -206,11 +268,11 @@ export class GPXApp {
     this.ui.showStatus("Loading GPX file...", 1000);
 
     const reader = new FileReader();
-    reader.onload = (event) => {
+    reader.onload = async (event) => {
       const gpxText = event.target.result;
 
-      // Save to localStorage
-      this.storage.saveGpx(gpxText, file.name);
+      // Save to IndexedDB
+      await this.storage.saveGpx(gpxText, file.name);
 
       // Process the GPX content
       this.gpxProcessor.processGpxContent(
@@ -222,9 +284,9 @@ export class GPXApp {
     reader.readAsText(file);
   }
 
-  clearGpx() {
+  async clearGpx() {
     try {
-      this.storage.clearGpx();
+      await this.storage.clearGpx();
 
       if (window.gpxLayer) {
         this.map.removeLayer(window.gpxLayer);

@@ -239,6 +239,7 @@ export class GPXProcessor {
 
       // Handle proximity filtering for JSON points if available (only if no waypoints)
       if (waypoints.length === 0 && jsonPointsData && trackPoints.length > 0) {
+        // Fire and forget - don't await to avoid blocking UI
         this.handleProximityFiltering(jsonPointsData, trackPoints, filename);
       }
     } catch (fallbackError) {
@@ -265,6 +266,7 @@ export class GPXProcessor {
     if (waypoints.length > 0) {
       this.displayWaypoints(waypoints);
     } else if (jsonPointsData && trackPoints.length > 0) {
+      // Fire and forget - don't await to avoid blocking UI
       this.handleProximityFiltering(jsonPointsData, trackPoints, filename);
     }
   }
@@ -494,18 +496,20 @@ export class GPXProcessor {
     });
   }
 
-  handleProximityFiltering(jsonPointsData, trackPoints, filename) {
+  async handleProximityFiltering(jsonPointsData, trackPoints, filename) {
     // First check if we have cached waypoints for this GPX file
-    const cachedWaypoints = this.storage.loadWaypoints(filename || "unknown");
+    const cachedWaypoints = await this.storage.loadWaypoints(
+      filename || "unknown"
+    );
 
     if (cachedWaypoints && cachedWaypoints.length > 0) {
       console.log(
-        `Using ${cachedWaypoints.length} cached waypoints from localStorage`
+        `Using ${cachedWaypoints.length} cached waypoints from IndexedDB`
       );
       this.displayCachedWaypoints(cachedWaypoints);
     } else {
       // No cached waypoints, calculate new ones
-      this.calculateAndDisplayNewWaypoints(
+      await this.calculateAndDisplayNewWaypoints(
         jsonPointsData,
         trackPoints,
         filename
@@ -525,7 +529,7 @@ export class GPXProcessor {
     });
   }
 
-  calculateAndDisplayNewWaypoints(jsonPointsData, trackPoints, filename) {
+  async calculateAndDisplayNewWaypoints(jsonPointsData, trackPoints, filename) {
     const nearbyPoints = this.pointFilter.filterByProximity(
       jsonPointsData,
       trackPoints
@@ -535,9 +539,9 @@ export class GPXProcessor {
       nearbyPoints
     );
 
-    // Save the calculated waypoints to localStorage
+    // Save the calculated waypoints to IndexedDB
     if (nearbyPoints.length > 0 && filename) {
-      this.storage.saveWaypoints(nearbyPoints, filename);
+      await this.storage.saveWaypoints(nearbyPoints, filename);
     }
 
     // Add markers for nearby points
